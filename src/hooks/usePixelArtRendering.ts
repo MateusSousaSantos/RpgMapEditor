@@ -10,25 +10,31 @@ export const usePixelArtRendering = (
   // Enhanced pixel art rendering setup
   useEffect(() => {
     const setupPixelArt = () => {
-      if (stageRef.current && layerRef.current) {
+      const stage = stageRef.current;
+      const layer = layerRef.current;
+      
+      if (stage && layer) {
         // Get the actual canvas element
-        const canvas = stageRef.current.content?.querySelector('canvas');
+        const canvas = stage.content?.querySelector('canvas');
         if (canvas) {
           const context = canvas.getContext('2d');
           if (context) {
-            // Disable all forms of image smoothing
-            context.imageSmoothingEnabled = false;
-            (context as any).webkitImageSmoothingEnabled = false;
-            (context as any).mozImageSmoothingEnabled = false;
-            (context as any).msImageSmoothingEnabled = false;
-            context.imageSmoothingQuality = 'low';
-            
-            console.log('Image smoothing disabled for pixel art');
+            // Only update if image smoothing is currently enabled to prevent spam
+            if (context.imageSmoothingEnabled !== false) {
+              // Disable all forms of image smoothing
+              context.imageSmoothingEnabled = false;
+              (context as any).webkitImageSmoothingEnabled = false;
+              (context as any).mozImageSmoothingEnabled = false;
+              (context as any).msImageSmoothingEnabled = false;
+              context.imageSmoothingQuality = 'low';
+              
+              console.log('Image smoothing disabled for pixel art');
+            }
           }
         }
 
         // Force layer to redraw with new settings
-        layerRef.current.batchDraw();
+        layer.batchDraw();
       }
     };
 
@@ -36,5 +42,5 @@ export const usePixelArtRendering = (
     const timeoutId = setTimeout(setupPixelArt, 100);
     
     return () => clearTimeout(timeoutId);
-  }, [stageRef.current, layerRef.current, stageScale]);
+  }, [stageScale]); // Removed ref.current dependencies to prevent infinite re-renders
 };

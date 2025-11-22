@@ -10,7 +10,7 @@ interface BoxSelectionPreviewProps {
   tileSize: number;
 }
 
-export const BoxSelectionPreview: React.FC<BoxSelectionPreviewProps> = ({
+export const BoxSelectionPreview = React.memo<BoxSelectionPreviewProps>(({
   startRow,
   startCol,
   endRow,
@@ -40,4 +40,4 @@ export const BoxSelectionPreview: React.FC<BoxSelectionPreviewProps> = ({
       listening={false}
     />
   );
-};
+});

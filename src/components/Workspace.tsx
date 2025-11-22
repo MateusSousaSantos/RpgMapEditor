@@ -13,11 +13,7 @@ import { LayerLines } from "./WorkspaceUI/LayerLines";
 import { BoxSelectionPreview } from "./WorkspaceUI/BoxSelectionPreview";
 import { TILE_SIZE } from "../utils/textureUtils";
 
-
-const ROWS = 10;
-const COLS = 10;
-
-export const Workspace: React.FC = () => {
+export const Workspace = React.memo(() => {
   const { currentTool, getToolDisplayName, selectedTileType, paintingMode } = useTool();
   const {
     layers,
@@ -27,7 +23,8 @@ export const Workspace: React.FC = () => {
     updateLayerMatrix,
     updateLayerTextureMatrix,
     getVisibleLayers,
-    gridLayer
+    gridLayer,
+    mapConfig
   } = useLayer();
   
   const stageRef = useRef<Konva.Stage | null>(null);
@@ -51,8 +48,8 @@ export const Workspace: React.FC = () => {
     getCurrentLayer,
     currentLayerIndex,
     selectedTileType,
-    rows: ROWS,
-    cols: COLS,
+    rows: mapConfig.rows,
+    cols: mapConfig.cols,
     tileSize: TILE_SIZE,
     autotilingEngine,
     stageRef
@@ -61,7 +58,7 @@ export const Workspace: React.FC = () => {
   // Update painting mode when it changes in context
   React.useEffect(() => {
     paintingTool.setPaintingMode(paintingMode);
-  }, [paintingMode, paintingTool]);
+  }, [paintingMode, paintingTool.setPaintingMode]);
 
   // Handle stage events for painting
   const handleStageMouseDown = () => {
@@ -92,7 +89,16 @@ export const Workspace: React.FC = () => {
   // Determine if stage should be draggable
   const stageDraggable = !paintingTool.paintingState.isActive;
 
+  // Stage drag handlers to fix ReactKonva warning
+  const handleStageDragMove = React.useCallback(() => {
+    // Position is handled by Konva internally during drag
+    // This handler satisfies ReactKonva's requirement for drag events
+  }, []);
 
+  const handleStageDragEnd = React.useCallback(() => {
+    // Position is handled by Konva internally after drag
+    // This handler satisfies ReactKonva's requirement for drag events
+  }, []);
 
   return (
     <div className="relative w-full h-full">
@@ -113,6 +119,8 @@ export const Workspace: React.FC = () => {
         pixelRatio={1}
         listening={true}
         onWheel={(e) => handleWheel(e, stageRef)}
+        onDragMove={handleStageDragMove}
+        onDragEnd={handleStageDragEnd}
         onMouseDown={handleStageMouseDown}
         onMouseMove={handleStageMouseMove}
         onMouseUp={handleStageMouseUp}
@@ -122,8 +130,8 @@ export const Workspace: React.FC = () => {
           {/* Render background grid if configured */}
           {gridLayer.visible && gridLayer.renderOrder === 'background' && (
             <LayerLines 
-              rows={ROWS} 
-              cols={COLS} 
+              rows={mapConfig.rows} 
+              cols={mapConfig.cols} 
               opacity={gridLayer.opacity}
               strokeWidth={gridLayer.strokeWidth}
               stroke={gridLayer.stroke}
@@ -136,8 +144,8 @@ export const Workspace: React.FC = () => {
               <TileGrid 
                 key={layer.id}
                 layer={layer} 
-                rows={ROWS} 
-                cols={COLS} 
+                rows={mapConfig.rows} 
+                cols={mapConfig.cols} 
                 onTileClick={handleTileClick}
                 useAutotiling={true}
                 opacity={layer.opacity}
@@ -149,8 +157,8 @@ export const Workspace: React.FC = () => {
           {/* Render foreground grid if configured */}
           {gridLayer.visible && gridLayer.renderOrder === 'foreground' && (
             <LayerLines 
-              rows={ROWS} 
-              cols={COLS} 
+              rows={mapConfig.rows} 
+              cols={mapConfig.cols} 
               opacity={gridLayer.opacity}
               strokeWidth={gridLayer.strokeWidth}
               stroke={gridLayer.stroke}
@@ -171,4 +179,4 @@ export const Workspace: React.FC = () => {
       </Stage>
     </div>
   );
-};
+});

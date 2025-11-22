@@ -245,7 +245,7 @@ export const Sidebar: React.FC = () => {
 
   const renderGridLayerPanel = () => {
     return (
-      <div className="border-t border-slate-700 pt-4">
+      <div className="pt-4">
         <SectionHeader
           title="Grid Layer"
           isOpen={sectionsOpen.gridLayer}

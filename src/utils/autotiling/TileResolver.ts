@@ -4,8 +4,7 @@ import {
   AutotilingVariant, 
   GRASS_AUTOTILING_TEXTURES,
   WATER_AUTOTILING_TEXTURES,
-  TileType,
-  DIRECTION_MASKS
+  TileType
 } from '../../types/textures';
 import { NeighborContext } from './NeighborAnalyzer';
 

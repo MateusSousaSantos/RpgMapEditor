@@ -100,7 +100,7 @@ interface TileGridProps {
   isCurrentLayer?: boolean;
 }
 
-export const TileGrid: React.FC<TileGridProps> = ({ 
+export const TileGrid = React.memo<TileGridProps>(({ 
   layer, 
   rows, 
   cols, 
@@ -209,7 +209,7 @@ export const TileGrid: React.FC<TileGridProps> = ({
       {renderTiles()}
     </Group>
   );
-};
+});
 
 // Export hook for external access to autotiling engine
 export const useAutotilingEngine = (layer: Layer, rows: number, cols: number) => {

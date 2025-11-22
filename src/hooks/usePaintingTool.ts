@@ -1,5 +1,5 @@
 // src/hooks/usePaintingTool.ts
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import Konva from 'konva';
 import { TileType } from '../types/textures';
 import { AutotilingEngine, BatchUpdateResult } from '../utils/autotiling/AutotilingEngine';
@@ -44,6 +44,11 @@ export const usePaintingTool = ({
   autotilingEngine,
   stageRef
 }: UsePaintingToolProps) => {
+  // Stable references to prevent callback recreation
+  const stableUpdateLayerMatrix = useMemo(() => updateLayerMatrix, [updateLayerMatrix]);
+  const stableUpdateLayerTextureMatrix = useMemo(() => updateLayerTextureMatrix, [updateLayerTextureMatrix]);
+  const stableGetCurrentLayer = useMemo(() => getCurrentLayer, [getCurrentLayer]);
+
   const [paintingState, setPaintingState] = useState<PaintingState>({
     isActive: false,
     mode: 'single',
@@ -106,8 +111,8 @@ export const usePaintingTool = ({
     if (!autotilingEngine || tilesToUpdate.length === 0) return;
 
     // Use LayerContext methods if available, otherwise fall back to setLayers
-    if (updateLayerMatrix && getCurrentLayer) {
-      const currentLayer = getCurrentLayer();
+    if (stableUpdateLayerMatrix && stableGetCurrentLayer) {
+      const currentLayer = stableGetCurrentLayer();
       if (!currentLayer) return;
 
       const newMatrix = currentLayer.matrix.map(r => [...r]);
@@ -145,10 +150,10 @@ export const usePaintingTool = ({
       });
 
       // Update the layer matrix using LayerContext
-      updateLayerMatrix(currentLayerIndex, newMatrix);
+      stableUpdateLayerMatrix(currentLayerIndex, newMatrix);
 
       // Update texture matrix if available
-      if (updateLayerTextureMatrix) {
+      if (stableUpdateLayerTextureMatrix) {
         let textureMatrix = currentLayer.textureMatrix;
         if (!textureMatrix) {
           textureMatrix = Array.from({ length: rows }, () =>
@@ -164,7 +169,7 @@ export const usePaintingTool = ({
           }
         });
 
-        updateLayerTextureMatrix(currentLayerIndex, textureMatrix);
+        stableUpdateLayerTextureMatrix(currentLayerIndex, textureMatrix);
       }
     } else if (setLayers) {
       // Legacy behavior using setLayers
@@ -226,7 +231,7 @@ export const usePaintingTool = ({
         return newLayers;
       });
     }
-  }, [autotilingEngine, currentLayerIndex, selectedTileType, rows, cols, setLayers, updateLayerMatrix, updateLayerTextureMatrix, getCurrentLayer]);
+  }, [autotilingEngine, currentLayerIndex, selectedTileType, rows, cols, setLayers, stableUpdateLayerMatrix, stableUpdateLayerTextureMatrix, stableGetCurrentLayer]);
 
   // Handle single tile painting
   const paintSingleTile = useCallback((row: number, col: number) => {
@@ -293,11 +298,19 @@ export const usePaintingTool = ({
     const wasDragging = paintingState.isDragging;
     const isDragging = distance > paintingState.dragThreshold;
 
-    setPaintingState(prev => ({ 
-      ...prev, 
-      currentPosition: pos,
-      isDragging 
-    }));
+    // Only update state if there's a meaningful change to prevent excessive re-renders
+    const hasPositionChanged = !paintingState.currentPosition || 
+      pos.row !== paintingState.currentPosition.row || 
+      pos.col !== paintingState.currentPosition.col;
+    const hasDragStateChanged = isDragging !== paintingState.isDragging;
+
+    if (hasPositionChanged || hasDragStateChanged) {
+      setPaintingState(prev => ({ 
+        ...prev, 
+        currentPosition: pos,
+        isDragging 
+      }));
+    }
 
     // If user just started dragging, paint the initial tile
     if (!wasDragging && isDragging && paintingState.mode === 'single') {

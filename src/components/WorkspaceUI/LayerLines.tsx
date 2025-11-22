@@ -11,7 +11,7 @@ interface LayerLinesProps {
   stroke?: string;
 }
 
-export const LayerLines: React.FC<LayerLinesProps> = ({ 
+export const LayerLines = React.memo<LayerLinesProps>(({ 
   rows, 
   cols, 
   opacity = 0.3, 
@@ -57,4 +57,4 @@ export const LayerLines: React.FC<LayerLinesProps> = ({
       {renderHorizontalLines()}
     </>
   );
-};
+});
