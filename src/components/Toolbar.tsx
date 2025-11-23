@@ -7,6 +7,7 @@ import {
   FaFolderOpen,
   FaCircle,
   FaPlus,
+  FaArchive,
 } from "react-icons/fa";
 import { useTool } from "../contexts/ToolContext";
 import { useUndoRedo } from "../contexts/UndoRedoContext";
@@ -42,11 +43,16 @@ export const Toolbar: React.FC = () => {
         showModal(<LoadDialog onClose={() => hideModal()} />);
       } else if (e.ctrlKey && e.key === "n") {
         e.preventDefault();
-        const handleCreateMap = (config: MapConfig) => {
-          initializeNewMap(config);
+        const handleCreateMap = async (config: MapConfig) => {
+          await initializeNewMap(config);
           hideModal();
         };
-        showModal(<CreateMapDialog onClose={() => hideModal()} onCreate={handleCreateMap} />);
+        showModal(
+          <CreateMapDialog
+            onClose={() => hideModal()}
+            onCreate={handleCreateMap}
+          />
+        );
       }
     };
 
@@ -153,12 +159,17 @@ export const Toolbar: React.FC = () => {
 
   const NewMapButton = () => {
     const handleNewMap = () => {
-      const handleCreateMap = (config: MapConfig) => {
-        initializeNewMap(config);
+      const handleCreateMap = async (config: MapConfig) => {
+        await initializeNewMap(config);
         hideModal();
       };
 
-      showModal(<CreateMapDialog onClose={() => hideModal()} onCreate={handleCreateMap} />);
+      showModal(
+        <CreateMapDialog
+          onClose={() => hideModal()}
+          onCreate={handleCreateMap}
+        />
+      );
     };
 
     return (
@@ -185,6 +196,20 @@ export const Toolbar: React.FC = () => {
           {isDirty ? "Unsaved" : lastSaved ? "Saved" : ""}
         </span>
       </div>
+    );
+  };
+
+  const Props = () => {
+    const isActive = isToolActive("addProp");
+    return (
+      <button
+        onClick={() => setCurrentTool(isActive ? null : "addProp")}
+        className={`p-2 rounded transition-colors ${
+          isActive ? "bg-white text-black" : "hover:bg-white group"
+        }`}
+      >
+        <FaArchive size={20} className={isActive ? "text-black" : "text-white group-hover:text-black"} />
+      </button>
     );
   };
 
@@ -255,6 +280,7 @@ export const Toolbar: React.FC = () => {
       {/* <Select /> */}
       <Draw />
       {/* <Erase /> */}
+      <Props />
 
       {/* Auto-save Indicator */}
       <AutoSaveIndicator />

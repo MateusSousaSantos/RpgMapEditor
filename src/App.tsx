@@ -10,14 +10,15 @@ import { Sidebar } from "./components/Sidebar";
 import { Workspace } from "./components/Workspace";
 import { CreateMapDialog, MapConfig } from "./components/CreateMapDialog";
 import { useMapStorage } from "./contexts/MapStorageContext";
+import { LoadingScreen } from "./components/LoadingScreen";
 
 
 
 // Component that has access to all contexts
 const AppContent: React.FC = () => {
   const { showModal, hideModal } = useModal();
-  const { initializeNewMap, mapConfig } = useLayer();
-  const { getMapList } = useMapStorage();
+  const { initializeNewMap, mapConfig, isInitializingMap } = useLayer();
+  const { getMapList, isLoadingMap } = useMapStorage();
 
   // Check for first visit or empty maps and show create dialog
   useEffect(() => {
@@ -25,8 +26,8 @@ const AppContent: React.FC = () => {
     
     // Show create map dialog if no saved maps exist
     if (savedMaps.length === 0) {
-      const handleCreateMap = (config: MapConfig) => {
-        initializeNewMap(config);
+      const handleCreateMap = async (config: MapConfig) => {
+        await initializeNewMap(config);
         hideModal();
       };
 
@@ -57,6 +58,21 @@ const AppContent: React.FC = () => {
         </section>
         <Toolbar />
       </main>
+      
+      {/* Loading Screens */}
+      {isInitializingMap && (
+        <LoadingScreen 
+          message="Creating New Map"
+          showProgress={false}
+        />
+      )}
+      
+      {isLoadingMap && (
+        <LoadingScreen 
+          message="Loading Map"
+          showProgress={false}
+        />
+      )}
     </div>
   );
 };

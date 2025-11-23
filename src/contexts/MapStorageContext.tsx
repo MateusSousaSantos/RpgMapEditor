@@ -60,6 +60,9 @@ interface MapStorageContextType {
   lastSaved: Date | null;
   autoSaveEnabled: boolean;
   
+  // Loading state
+  isLoadingMap: boolean;
+  
   // Storage operations
   saveMap: (name: string, description?: string) => Promise<string>;
   loadMap: (id: string) => Promise<void>;
@@ -100,6 +103,7 @@ export const MapStorageProvider: React.FC<MapStorageProviderProps> = ({
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [hasAutoSave, setHasAutoSave] = useState(false);
+  const [isLoadingMap, setIsLoadingMap] = useState(false);
 
   // Calculate map size in bytes
   const calculateMapSize = useCallback((mapData: MapDocument): number => {
@@ -208,13 +212,21 @@ export const MapStorageProvider: React.FC<MapStorageProviderProps> = ({
 
   // Load map
   const loadMap = useCallback(async (id: string): Promise<void> => {
+    setIsLoadingMap(true);
+    
     try {
+      // Add small delay for visual feedback
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       const mapJson = localStorage.getItem(`${STORAGE_CONFIG.STORAGE_KEY_PREFIX}${id}`);
       if (!mapJson) {
         throw new Error('Map not found');
       }
       
       const mapDocument: MapDocument = JSON.parse(mapJson);
+      
+      // Add another delay for processing
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       // Load layers and grid
       setLayers(mapDocument.layers);
@@ -226,6 +238,8 @@ export const MapStorageProvider: React.FC<MapStorageProviderProps> = ({
       setLastSaved(new Date(mapDocument.modifiedAt));
     } catch (error) {
       throw new Error(`Failed to load map: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsLoadingMap(false);
     }
   }, [setLayers, setGridLayer]);
 
@@ -290,13 +304,21 @@ export const MapStorageProvider: React.FC<MapStorageProviderProps> = ({
 
   // Load auto-save
   const loadAutoSave = useCallback(async (): Promise<void> => {
+    setIsLoadingMap(true);
+    
     try {
+      // Add small delay for visual feedback
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       const autoSaveJson = localStorage.getItem(STORAGE_CONFIG.AUTOSAVE_KEY);
       if (!autoSaveJson) {
         throw new Error('No auto-save data found');
       }
       
       const autoSaveData: AutoSaveData = JSON.parse(autoSaveJson);
+      
+      // Add processing delay
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       setLayers(autoSaveData.mapData.layers);
       if (setGridLayer) {
@@ -307,6 +329,8 @@ export const MapStorageProvider: React.FC<MapStorageProviderProps> = ({
       setLastSaved(autoSaveData.lastSaved);
     } catch (error) {
       throw new Error(`Failed to load auto-save: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsLoadingMap(false);
     }
   }, [setLayers, setGridLayer]);
 
@@ -329,6 +353,7 @@ export const MapStorageProvider: React.FC<MapStorageProviderProps> = ({
     isDirty,
     lastSaved,
     autoSaveEnabled,
+    isLoadingMap,
     saveMap,
     loadMap,
     deleteMap,

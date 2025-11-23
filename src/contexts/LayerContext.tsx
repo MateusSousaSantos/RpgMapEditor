@@ -24,7 +24,10 @@ interface LayerContextType {
     rows: number;
     cols: number;
   };
-  initializeNewMap: (config: MapConfig) => void;
+  initializeNewMap: (config: MapConfig) => Promise<void>;
+  
+  // Loading state
+  isInitializingMap: boolean;
   
   // Core layer management
   layers: EnhancedLayer[];
@@ -124,6 +127,7 @@ export const LayerProvider: React.FC<LayerProviderProps> = ({ children }) => {
   
   const [currentLayerIndex, setCurrentLayerIndex] = useState(0);
   const [autotilingEngines] = useState(new Map<string, AutotilingEngine>());
+  const [isInitializingMap, setIsInitializingMap] = useState(false);
   
   // Grid layer state
   const [gridLayer, setGridLayer] = useState<GridLayer>({
@@ -137,36 +141,52 @@ export const LayerProvider: React.FC<LayerProviderProps> = ({ children }) => {
   });
   
   // Initialize new map with configuration
-  const initializeNewMap = useCallback((config: MapConfig) => {
-    // Update map configuration
-    setMapConfig({
-      name: config.name,
-      description: config.description,
-      rows: config.rows,
-      cols: config.cols
-    });
+  const initializeNewMap = useCallback(async (config: MapConfig) => {
+    setIsInitializingMap(true);
     
-    // Create new base layer with specified tile type
-    const baseMatrix = Array.from({ length: config.rows }, () =>
-      Array.from({ length: config.cols }, () => config.baseTileType)
-    );
-    
-    const newBaseLayer: EnhancedLayer = {
-      id: generateLayerId(),
-      name: "Base Layer",
-      visible: true,
-      opacity: 1.0,
-      matrix: baseMatrix,
-    };
-    
-    // Clear existing layers and autotiling engines
-    autotilingEngines.clear();
-    setLayers([newBaseLayer]);
-    setCurrentLayerIndex(0);
-    
-    // Initialize autotiling engine for new layer
-    const engine = new AutotilingEngine(baseMatrix, config.rows, config.cols);
-    autotilingEngines.set(newBaseLayer.id, engine);
+    try {
+      // Step 1: Update map configuration
+      setMapConfig({
+        name: config.name,
+        description: config.description,
+        rows: config.rows,
+        cols: config.cols
+      });
+      
+      // Small delay to show the loading screen
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Step 2: Create new base layer with specified tile type
+      const baseMatrix = Array.from({ length: config.rows }, () =>
+        Array.from({ length: config.cols }, () => config.baseTileType)
+      );
+      
+      // Another small delay for visual feedback
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      const newBaseLayer: EnhancedLayer = {
+        id: generateLayerId(),
+        name: "Base Layer",
+        visible: true,
+        opacity: 1.0,
+        matrix: baseMatrix,
+      };
+      
+      // Step 3: Clear existing layers and autotiling engines
+      autotilingEngines.clear();
+      setLayers([newBaseLayer]);
+      setCurrentLayerIndex(0);
+      
+      // Final delay for autotiling setup
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Step 4: Initialize autotiling engine for new layer
+      const engine = new AutotilingEngine(baseMatrix, config.rows, config.cols);
+      autotilingEngines.set(newBaseLayer.id, engine);
+      
+    } finally {
+      setIsInitializingMap(false);
+    }
   }, [autotilingEngines]);
   
   // Initialize autotiling engine for a layer
@@ -498,6 +518,7 @@ export const LayerProvider: React.FC<LayerProviderProps> = ({ children }) => {
   const value: LayerContextType = {
     mapConfig,
     initializeNewMap,
+    isInitializingMap,
     layers,
     currentLayerIndex,
     addLayer,

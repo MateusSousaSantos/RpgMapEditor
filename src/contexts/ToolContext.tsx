@@ -2,13 +2,14 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 import { TileType } from '../types/textures';
 
-export type ToolType = 'draw' | 'addMap' | 'select' | 'erase' | null;
+export type ToolType = 'draw' | 'addMap' | 'addProp' | 'select' | 'erase' | null;
 export type PaintingMode = 'single' | 'box'; // Removed 'drag'
 
 export const getToolDisplayName = (tool: ToolType): string => {
   switch (tool) {
     case 'draw': return 'Draw';
     case 'addMap': return 'Add Map';
+    case 'addProp': return 'Add Prop';
     case 'select': return 'Select';
     case 'erase': return 'Erase';
     default: return 'None';

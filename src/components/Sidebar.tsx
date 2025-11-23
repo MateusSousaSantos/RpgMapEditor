@@ -180,6 +180,13 @@ export const Sidebar: React.FC = () => {
 
       case "select":
         return <div className="space-y-4"></div>;
+      case "addProp":
+        return <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-slate-200">Add Prop Tool</h3>
+          <p className="text-sm text-slate-400">
+            Click on the map to add props such as trees, rocks, and buildings.
+          </p>
+        </div>;
 
       case "erase":
         return <div className="space-y-4"></div>;
@@ -245,7 +252,7 @@ export const Sidebar: React.FC = () => {
 
   const renderGridLayerPanel = () => {
     return (
-      <div className="pt-4">
+      <div className="">
         <SectionHeader
           title="Grid Layer"
           isOpen={sectionsOpen.gridLayer}
