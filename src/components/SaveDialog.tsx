@@ -10,7 +10,7 @@ interface SaveDialogProps {
 }
 
 export const SaveDialog: React.FC<SaveDialogProps> = ({ onClose, autoSave = false }) => {
-  const { mapConfig, setMapConfig } = useLayer();
+  const { mapConfig } = useLayer();
   const [name, setName] = useState(mapConfig.name || '');
   const [description, setDescription] = useState(mapConfig.description || '');
   const [saving, setSaving] = useState(false);
