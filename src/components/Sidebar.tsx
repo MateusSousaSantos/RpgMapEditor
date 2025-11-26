@@ -9,20 +9,51 @@ import {
   FaMinus,
   FaCopy,
   FaGripVertical,
+  FaTree,
+  FaChair,
+  FaStar,
+  FaBuilding,
 } from "react-icons/fa";
 import { useTool } from "../contexts/ToolContext";
 import { useLayer } from "../contexts/LayerContext";
 import { TileType } from "../types/textures";
+import { getCategoriesWithProps, getPropsByCategory } from "../types/props";
 import { PiSelection } from "react-icons/pi";
 import { HiCursorClick } from "react-icons/hi";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 export const Sidebar: React.FC = () => {
   const [open, setOpen] = useState(true);
-  const [sectionsOpen, setSectionsOpen] = useState({
-    paintingModes: true,
-    tileSelection: true,
-    layers: true,
-    gridLayer: true,
+  
+  // Get categories that have props
+  const propCategories = getCategoriesWithProps();
+  
+  // Initialize sections state with dynamic prop categories
+  const [sectionsOpen, setSectionsOpen] = useState(() => {
+    const initial: Record<string, boolean> = {
+      paintingModes: true,
+      tileSelection: true,
+      propSelection: true,
+      layers: true,
+      gridLayer: true,
+    };
+    // Add each prop category to sections
+    propCategories.forEach(category => {
+      initial[category.id] = true;
+    });
+    return initial;
   });
 
   const {
@@ -40,16 +71,37 @@ export const Sidebar: React.FC = () => {
     }));
   };
 
+  // Helper to get icon component based on category icon name
+  const getCategoryIcon = (iconName: string) => {
+    const icons: Record<string, React.ReactElement> = {
+      tree: <FaTree className="mr-2" />,
+      chair: <FaChair className="mr-2" />,
+      star: <FaStar className="mr-2" />,
+      building: <FaBuilding className="mr-2" />,
+    };
+    return icons[iconName] || <FaTree className="mr-2" />;
+  };
+
   const SectionHeader: React.FC<{
     title: string;
     isOpen: boolean;
+    icon?: React.ReactNode;
     onToggle: () => void;
-  }> = ({ title, isOpen, onToggle }) => (
+  }> = ({ title, isOpen, icon, onToggle }) => (
     <button
       onClick={onToggle}
       className="flex items-center justify-between w-full py-2 text-sm font-medium text-slate-300 hover:text-slate-200 transition-colors"
     >
-      <span>{title}</span>
+      <span className="flex justify-start items-center">
+        {icon ? (
+          <>
+        <span className="text-sm">{React.cloneElement(icon as React.ReactElement<any>, { size: 20 })}</span>
+        {title}
+          </>
+        ) : (
+          title
+        )}
+      </span>
       <div
         className={`transition-transform duration-200 ${
           isOpen ? "rotate-180" : "rotate-0"
@@ -181,12 +233,64 @@ export const Sidebar: React.FC = () => {
       case "select":
         return <div className="space-y-4"></div>;
       case "addProp":
-        return <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-slate-200">Add Prop Tool</h3>
-          <p className="text-sm text-slate-400">
-            Click on the map to add props such as trees, rocks, and buildings.
-          </p>
-        </div>;
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-slate-200">
+              Add Prop Tool
+            </h3>
+            <p className="text-sm text-slate-400">
+              Drag to the map to add props such as trees, rocks, and furniture.
+            </p>
+
+            <div className="border-b border-slate-700 pb-3">
+              <SectionHeader
+                title="Prop Selection"
+                isOpen={sectionsOpen.propSelection}
+                onToggle={() => toggleSection("propSelection")}
+              />
+              <CollapsibleContent isOpen={sectionsOpen.propSelection}>
+                <div className="mt-2 pl-5 space-y-2">
+                  {propCategories.map((category) => {
+                    const categoryProps = getPropsByCategory(category.id);
+                    if (categoryProps.length === 0) return null;
+                    
+                    return (
+                      <div key={category.id}>
+                        <SectionHeader
+                          title={category.name}
+                          isOpen={sectionsOpen[category.id]}
+                          icon={getCategoryIcon(category.icon)}
+                          onToggle={() => toggleSection(category.id as keyof typeof sectionsOpen)}
+                        />
+                        <CollapsibleContent isOpen={sectionsOpen[category.id]}>
+                          <div className="mt-2 grid grid-cols-4 gap-1 pb-2 pl-2">
+                            {categoryProps.map((prop) => (
+                              <img
+                                key={prop.id}
+                                src={prop.src}
+                                alt={prop.name}
+                                draggable="true"
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('propType', prop.id);
+                                  e.dataTransfer.setData('propSrc', prop.src);
+                                  e.dataTransfer.setData('propWidth', prop.defaultWidth.toString());
+                                  e.dataTransfer.setData('propHeight', prop.defaultHeight.toString());
+                                }}
+                                className="w-15 h-15 rounded pixelated cursor-grab active:cursor-grabbing hover:outline hover:outline-slate-400 bg-slate-800/50 p-1"
+                                style={{ imageRendering: "pixelated" }}
+                                title={prop.name}
+                              />
+                            ))}
+                          </div>
+                        </CollapsibleContent>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </div>
+          </div>
+        );
 
       case "erase":
         return <div className="space-y-4"></div>;
@@ -226,6 +330,11 @@ export const Sidebar: React.FC = () => {
     updateGridStroke,
     updateGridRenderOrder,
   } = useLayer();
+
+  // dnd-kit sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
   const [editingLayerIndex, setEditingLayerIndex] = useState<number | null>(
     null
@@ -427,146 +536,64 @@ export const Sidebar: React.FC = () => {
               </button>
             </div>
 
-            {/* Layer List */}
-            <div className="space-y-1 max-h-64 overflow-y-auto">
-              {layers.map((layer, index) => (
-                <div
-                  key={layer.id}
-                  className={`flex items-center gap-2 p-2 rounded transition-colors ${
-                    index === currentLayerIndex
-                      ? "bg-slate-600 border border-slate-500"
-                      : "bg-slate-700/50 hover:bg-slate-700"
-                  }`}
-                >
-                  {/* Drag Handle */}
-                  <button
-                    className="text-slate-400 hover:text-slate-200 cursor-move p-1"
-                    title="Drag to reorder"
-                    onMouseDown={(e) => {
-                      // Simple drag implementation - can be enhanced with proper drag-and-drop library
-                      let startY = e.clientY;
-                      let startIndex = index;
+            {/* Layer List with dnd-kit */}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={({ active, over }) => {
+                if (!over || active.id === over.id) return;
 
-                      const handleMouseMove = (moveEvent: MouseEvent) => {
-                        const deltaY = moveEvent.clientY - startY;
-                        const newIndex = Math.max(
-                          0,
-                          Math.min(
-                            layers.length - 1,
-                            startIndex + Math.round(deltaY / 40) // 40px per layer approximately
-                          )
-                        );
+                // Reversed view array
+                const reversed = [...layers].reverse();
+                const oldReversedIndex = reversed.findIndex(
+                  (l) => l.id === active.id
+                );
+                const newReversedIndex = reversed.findIndex(
+                  (l) => l.id === over.id
+                );
+                if (oldReversedIndex === -1 || newReversedIndex === -1) return;
 
-                        if (newIndex !== startIndex) {
-                          moveLayer(startIndex, newIndex);
-                          startIndex = newIndex;
-                          startY = moveEvent.clientY;
-                        }
-                      };
+                // Convert reversed indices back to original indices
+                const oldIndex = layers.length - 1 - oldReversedIndex;
+                const newIndex = layers.length - 1 - newReversedIndex;
 
-                      const handleMouseUp = () => {
-                        document.removeEventListener(
-                          "mousemove",
-                          handleMouseMove
-                        );
-                        document.removeEventListener("mouseup", handleMouseUp);
-                      };
-
-                      document.addEventListener("mousemove", handleMouseMove);
-                      document.addEventListener("mouseup", handleMouseUp);
-                    }}
-                  >
-                    <FaGripVertical size={12} />
-                  </button>
-
-                  {/* Layer Content */}
-                  <div className="flex-1 min-w-0">
-                    {/* Layer Name */}
-                    {editingLayerIndex === index ? (
-                      <div className="flex gap-1">
-                        <input
-                          type="text"
-                          value={editingName}
-                          onChange={(e) => setEditingName(e.target.value)}
-                          onBlur={handleLayerNameSave}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleLayerNameSave();
-                            if (e.key === "Escape") handleLayerNameCancel();
-                          }}
-                          className="flex-1 px-2 py-1 text-xs bg-slate-800 text-slate-200 border border-slate-600 rounded"
-                          autoFocus
-                        />
-                      </div>
-                    ) : (
-                      <div
-                        className="flex items-center justify-between cursor-pointer"
-                        onClick={() => setCurrentLayer(index)}
-                        onDoubleClick={() => handleLayerNameEdit(index)}
-                      >
-                        <span
-                          className="text-sm text-slate-200 truncate"
-                          title={layer.name}
-                        >
-                          {layer.name}
-                        </span>
-                        <span className="text-xs text-slate-400 ml-2">
-                          #{index + 1}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Layer Controls */}
-                    <div className="flex items-center gap-2 mt-1">
-                      {/* Visibility Toggle */}
-                      <button
-                        onClick={() =>
-                          updateLayerVisibility(index, !layer.visible)
-                        }
-                        className={`p-1 rounded transition-colors ${
-                          layer.visible
-                            ? "text-slate-200 hover:text-slate-100"
-                            : "text-slate-500 hover:text-slate-400"
-                        }`}
-                        title={layer.visible ? "Hide Layer" : "Show Layer"}
-                      >
-                        {layer.visible ? (
-                          <FaEye size={12} />
-                        ) : (
-                          <FaEyeSlash size={12} />
-                        )}
-                      </button>
-
-                      {/* Opacity Slider */}
-                      <div className="flex-1 flex items-center gap-1">
-                        <span className="text-xs text-slate-400 w-8">
-                          {Math.round(layer.opacity * 100)}%
-                        </span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.1"
-                          value={layer.opacity}
-                          onChange={(e) =>
-                            updateLayerOpacity(
-                              index,
-                              parseFloat(e.target.value)
-                            )
-                          }
-                          className="flex-1 h-1 bg-slate-600 rounded-lg appearance-none cursor-pointer opacity-slider"
-                          title="Layer Opacity"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                moveLayer(oldIndex, newIndex);
+              }}
+            >
+              <SortableContext
+                // Items must match DOM visual order => use reversed ids
+                items={[...layers].reverse().map((l) => l.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-1 max-h-64 overflow-y-auto">
+                  {[...layers].reverse().map((layer, reversedIndex) => {
+                    const originalIndex = layers.length - 1 - reversedIndex;
+                    return (
+                      <SortableLayerItem
+                        key={layer.id}
+                        layer={layer}
+                        index={originalIndex} // pass original index for logic
+                        isCurrent={originalIndex === currentLayerIndex}
+                        editingLayerIndex={editingLayerIndex}
+                        editingName={editingName}
+                        setEditingName={setEditingName}
+                        handleLayerNameSave={handleLayerNameSave}
+                        handleLayerNameCancel={handleLayerNameCancel}
+                        handleLayerNameEdit={handleLayerNameEdit}
+                        setCurrentLayer={setCurrentLayer}
+                        updateLayerVisibility={updateLayerVisibility}
+                        updateLayerOpacity={updateLayerOpacity}
+                      />
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
 
             <div className="text-xs text-slate-500 mt-2">
               <p>• Click to select layer</p>
               <p>• Double-click name to edit</p>
-              <p>• Drag handle to reorder</p>
+              <p>• Drag handle (≡) to reorder</p>
             </div>
           </div>
         </CollapsibleContent>
@@ -607,6 +634,136 @@ export const Sidebar: React.FC = () => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
+// Sortable item component for layers
+interface SortableLayerItemProps {
+  layer: any;
+  index: number;
+  isCurrent: boolean;
+  editingLayerIndex: number | null;
+  editingName: string;
+  setEditingName: React.Dispatch<React.SetStateAction<string>>;
+  handleLayerNameSave: () => void;
+  handleLayerNameCancel: () => void;
+  handleLayerNameEdit: (index: number) => void;
+  setCurrentLayer: (index: number) => void;
+  updateLayerVisibility: (index: number, visible: boolean) => void;
+  updateLayerOpacity: (index: number, opacity: number) => void;
+}
+
+const SortableLayerItem: React.FC<SortableLayerItemProps> = ({
+  layer,
+  index,
+  isCurrent,
+  editingLayerIndex,
+  editingName,
+  setEditingName,
+  handleLayerNameSave,
+  handleLayerNameCancel,
+  handleLayerNameEdit,
+  setCurrentLayer,
+  updateLayerVisibility,
+  updateLayerOpacity,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: layer.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+    cursor: "default",
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-2 p-2 rounded transition-colors ${
+        isCurrent
+          ? "bg-slate-600 border border-slate-500"
+          : "bg-slate-700/50 hover:bg-slate-700"
+      }`}
+    >
+      <button
+        className="text-slate-400 hover:text-slate-200 cursor-grab p-1"
+        title="Drag to reorder"
+        {...attributes}
+        {...listeners}
+      >
+        <FaGripVertical size={12} />
+      </button>
+      <div className="flex-1 min-w-0">
+        {editingLayerIndex === index ? (
+          <div className="flex gap-1">
+            <input
+              type="text"
+              value={editingName}
+              onChange={(e) => setEditingName(e.target.value)}
+              onBlur={handleLayerNameSave}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleLayerNameSave();
+                if (e.key === "Escape") handleLayerNameCancel();
+              }}
+              className="flex-1 px-2 py-1 text-xs bg-slate-800 text-slate-200 border border-slate-600 rounded"
+              autoFocus
+            />
+          </div>
+        ) : (
+          <div
+            className="flex items-center justify-between cursor-pointer"
+            onClick={() => setCurrentLayer(index)}
+            onDoubleClick={() => handleLayerNameEdit(index)}
+          >
+            <span
+              className="text-sm text-slate-200 truncate"
+              title={layer.name}
+            >
+              {layer.name}
+            </span>
+          </div>
+        )}
+        <div className="flex items-center gap-2 mt-1">
+          <button
+            onClick={() => updateLayerVisibility(index, !layer.visible)}
+            className={`p-1 rounded transition-colors ${
+              layer.visible
+                ? "text-slate-200 hover:text-slate-100"
+                : "text-slate-500 hover:text-slate-400"
+            }`}
+            title={layer.visible ? "Hide Layer" : "Show Layer"}
+          >
+            {layer.visible ? <FaEye size={12} /> : <FaEyeSlash size={12} />}
+          </button>
+          <div className="flex-1 flex items-center gap-1">
+            <span className="text-xs text-slate-400 w-8">
+              {Math.round(layer.opacity * 100)}%
+            </span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={layer.opacity}
+              onChange={(e) =>
+                updateLayerOpacity(index, parseFloat(e.target.value))
+              }
+              className={`flex-1 h-1 ${
+                isCurrent ? "bg-slate-300" : "bg-slate-700"
+              } rounded-lg appearance-none cursor-pointer opacity-slider`}
+              title="Layer Opacity"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

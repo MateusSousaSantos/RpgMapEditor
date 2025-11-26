@@ -3,11 +3,12 @@ import {
   FaPaintBrush,
   FaUndo,
   FaRedo,
-  FaSave,
-  FaFolderOpen,
+
   FaCircle,
   FaPlus,
   FaArchive,
+  FaSave,
+  FaFolderOpen,
 } from "react-icons/fa";
 import { useTool } from "../contexts/ToolContext";
 import { useUndoRedo } from "../contexts/UndoRedoContext";
@@ -30,14 +31,16 @@ export const Toolbar: React.FC = () => {
   } = useUndoRedo();
   const { isDirty, lastSaved, autoSaveEnabled } = useMapStorage();
   const { showModal, hideModal } = useModal();
-  const { initializeNewMap } = useLayer();
+  const { initializeNewMap, mapConfig } = useLayer();
 
   // Keyboard shortcuts for save/load/new
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === "s" && !e.shiftKey) {
         e.preventDefault();
-        showModal(<SaveDialog onClose={() => hideModal()} />);
+        // Check if map has been saved before to determine if we should auto-save
+        const autoSave = !!mapConfig.currentMapId;
+        showModal(<SaveDialog onClose={() => hideModal()} autoSave={autoSave} />);
       } else if (e.ctrlKey && e.key === "o") {
         e.preventDefault();
         showModal(<LoadDialog onClose={() => hideModal()} />);
@@ -58,7 +61,7 @@ export const Toolbar: React.FC = () => {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [showModal]);
+  }, [showModal, mapConfig.currentMapId, initializeNewMap, hideModal]);
 
   const Draw = () => {
     const isActive = isToolActive("draw");
@@ -126,14 +129,19 @@ export const Toolbar: React.FC = () => {
   };
 
   const SaveButton = () => {
+    const { mapConfig } = useLayer();
+    
     const handleSave = () => {
-      showModal(<SaveDialog onClose={() => hideModal()} />);
+      // If map has been saved before (has currentMapId), auto-save
+      // Otherwise show dialog to get name
+      const autoSave = !!mapConfig.currentMapId;
+      showModal(<SaveDialog onClose={() => hideModal()} autoSave={autoSave} />);
     };
 
     return (
       <button
         onClick={handleSave}
-        title="Save Map (Ctrl+S)"
+        title={mapConfig.currentMapId ? `Save ${mapConfig.name} (Ctrl+S)` : "Save Map (Ctrl+S)"}
         className="p-2 rounded transition-colors hover:bg-white group text-white"
       >
         <FaSave size={20} className="text-white group-hover:text-black" />
@@ -225,29 +233,6 @@ export const Toolbar: React.FC = () => {
   //       }`}
   //     >
   //       <FaMousePointer
-  //         size={24}
-  //         className={
-  //           isActive
-  //             ? 'text-black'
-  //             : 'text-white group-hover:text-black'
-  //         }
-  //       />
-  //     </button>
-  //   );
-  // };
-
-  // const Erase = () => {
-  //   const isActive = isToolActive('erase');
-  //   return (
-  //     <button
-  //       onClick={() => setCurrentTool(isActive ? null : 'erase')}
-  //       className={`p-2 rounded transition-colors ${
-  //         isActive
-  //           ? 'bg-white text-black'
-  //           : 'hover:bg-white group'
-  //       }`}
-  //     >
-  //       <FaEraser
   //         size={24}
   //         className={
   //           isActive

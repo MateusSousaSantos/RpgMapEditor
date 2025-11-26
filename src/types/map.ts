@@ -1,10 +1,13 @@
 // src/types/map.ts
 
+import { Prop } from './props';
+
 export type TileId = number | null; // null = vazio
 
 export interface MapLayer {
   name: string;
   tiles: TileId[][]; // [y][x]
+  props?: Prop[];
 }
 
 export interface MapData {
@@ -27,4 +30,5 @@ export interface EnhancedLayer {
   opacity: number; // 0-1 range
   matrix: import('../types/textures').TileType[][];
   textureMatrix?: string[][]; // Resolved texture IDs from autotiling
+  props: Prop[];
 }

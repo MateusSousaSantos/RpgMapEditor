@@ -26,7 +26,6 @@ interface LoadDialogProps {
 export const LoadDialog: React.FC<LoadDialogProps> = ({ onClose }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
   
   const { loadMap, deleteMap, getMapList, hasAutoSave, loadAutoSave } = useMapStorage();
   const [mapList, setMapList] = useState(getMapList());
@@ -135,12 +134,7 @@ export const LoadDialog: React.FC<LoadDialogProps> = ({ onClose }) => {
                 .map((map: MapDocument) => (
                 <div 
                   key={map.id}
-                  className={`p-3 rounded border transition-colors cursor-pointer ${
-                    selectedMapId === map.id 
-                      ? 'bg-blue-900/30 border-blue-600' 
-                      : 'bg-slate-700/50 border-slate-600 hover:bg-slate-700'
-                  }`}
-                  onClick={() => setSelectedMapId(selectedMapId === map.id ? null : map.id)}
+                  className="p-3 rounded border transition-colors bg-slate-700/50 border-slate-600 hover:bg-slate-700"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
@@ -192,18 +186,9 @@ export const LoadDialog: React.FC<LoadDialogProps> = ({ onClose }) => {
         )}
 
         <div className="flex gap-3 mt-4">
-          {selectedMapId && (
-            <button
-              onClick={() => handleLoad(selectedMapId)}
-              disabled={loading}
-              className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 text-white py-2 px-4 rounded transition-colors font-medium"
-            >
-              {loading ? 'Loading...' : 'Load Selected'}
-            </button>
-          )}
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded transition-colors"
+            className="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded transition-colors"
           >
             Cancel
           </button>

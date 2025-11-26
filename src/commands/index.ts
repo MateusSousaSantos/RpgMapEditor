@@ -22,3 +22,4 @@ export * from './PaintTilesCommand';
 export * from './LayerPropertyCommand';
 export * from './LayerOperationCommand';
 export * from './GridConfigCommand';
+export * from './PropCommand';

@@ -64,7 +64,7 @@ interface MapStorageContextType {
   isLoadingMap: boolean;
   
   // Storage operations
-  saveMap: (name: string, description?: string) => Promise<string>;
+  saveMap: (name: string, description?: string, currentMapId?: string) => Promise<string>;
   loadMap: (id: string) => Promise<void>;
   deleteMap: (id: string) => Promise<void>;
   getMapList: () => MapDocument[];
@@ -90,6 +90,7 @@ interface MapStorageProviderProps {
   gridLayer: GridLayerState;
   setLayers: (layers: EnhancedLayer[]) => void;
   setGridLayer?: (gridLayer: GridLayerState) => void;
+  setMapConfig?: (config: { name: string; description?: string; rows: number; cols: number; currentMapId?: string }) => void;
 }
 
 export const MapStorageProvider: React.FC<MapStorageProviderProps> = ({ 
@@ -97,7 +98,8 @@ export const MapStorageProvider: React.FC<MapStorageProviderProps> = ({
   layers, 
   gridLayer, 
   setLayers,
-  setGridLayer 
+  setGridLayer,
+  setMapConfig 
 }) => {
   const [isDirty, setIsDirty] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -155,16 +157,23 @@ export const MapStorageProvider: React.FC<MapStorageProviderProps> = ({
   }, [getMapList]);
 
   // Save map with size validation and cleanup
-  const saveMap = useCallback(async (name: string, description?: string): Promise<string> => {
+  const saveMap = useCallback(async (name: string, description?: string, currentMapId?: string): Promise<string> => {
     const stats = checkStorageLimits();
     const maxSize = STORAGE_CONFIG.MAX_MAP_SIZE_MB * 1024 * 1024;
     
+    // Check if we're updating an existing map
+    let mapList = getMapList();
+    let existingMap = currentMapId ? mapList.find(m => m.id === currentMapId) : mapList.find(m => m.name === name);
+    
+    // Use existing ID if found, otherwise create new
+    const mapId = existingMap?.id || `map_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     // Create map document
     const mapDocument: MapDocument = {
-      id: `map_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: mapId,
       name: name.trim(),
-      version: 1,
-      createdAt: new Date(),
+      version: existingMap ? existingMap.version + 1 : 1,
+      createdAt: existingMap?.createdAt || new Date(),
       modifiedAt: new Date(),
       dimensions: { 
         rows: layers[0]?.matrix.length || 10, 
@@ -187,13 +196,17 @@ export const MapStorageProvider: React.FC<MapStorageProviderProps> = ({
       throw new Error(`Map too large (${(mapDocument.sizeBytes / 1024 / 1024).toFixed(1)}MB). Maximum allowed: ${STORAGE_CONFIG.MAX_MAP_SIZE_MB}MB`);
     }
 
-    // Check if we need to make space
-    let mapList = getMapList();
-    if (stats.availableSlots === 0) {
-      // Remove oldest map to make space
-      if (stats.oldestMap) {
-        mapList = mapList.filter(map => map.id !== stats.oldestMap!.id);
-        localStorage.removeItem(`${STORAGE_CONFIG.STORAGE_KEY_PREFIX}${stats.oldestMap.id}`);
+    // If updating existing map, remove it from list first
+    if (existingMap) {
+      mapList = mapList.filter(map => map.id !== existingMap.id);
+    } else {
+      // Check if we need to make space for new map
+      if (stats.availableSlots === 0) {
+        // Remove oldest map to make space
+        if (stats.oldestMap) {
+          mapList = mapList.filter(map => map.id !== stats.oldestMap!.id);
+          localStorage.removeItem(`${STORAGE_CONFIG.STORAGE_KEY_PREFIX}${stats.oldestMap.id}`);
+        }
       }
     }
 
@@ -204,11 +217,22 @@ export const MapStorageProvider: React.FC<MapStorageProviderProps> = ({
     mapList.push(mapDocument);
     updateMapList(mapList);
     
+    // Update the current map config with the saved ID
+    if (setMapConfig) {
+      setMapConfig({
+        name: mapDocument.name,
+        description: mapDocument.metadata?.description,
+        rows: mapDocument.dimensions.rows,
+        cols: mapDocument.dimensions.cols,
+        currentMapId: mapDocument.id
+      });
+    }
+    
     setIsDirty(false);
     setLastSaved(new Date());
     
     return mapDocument.id;
-  }, [layers, gridLayer, calculateMapSize, checkStorageLimits, getMapList, updateMapList]);
+  }, [layers, gridLayer, calculateMapSize, checkStorageLimits, getMapList, updateMapList, setMapConfig]);
 
   // Load map
   const loadMap = useCallback(async (id: string): Promise<void> => {
@@ -228,10 +252,25 @@ export const MapStorageProvider: React.FC<MapStorageProviderProps> = ({
       // Add another delay for processing
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Load layers and grid
-      setLayers(mapDocument.layers);
+      // Load layers and grid, ensure props are initialized for backward compatibility
+      const loadedLayers = mapDocument.layers.map(layer => ({
+        ...layer,
+        props: layer.props || []
+      }));
+      setLayers(loadedLayers);
       if (setGridLayer) {
         setGridLayer(mapDocument.gridLayer);
+      }
+      
+      // Update map configuration with loaded map name and dimensions
+      if (setMapConfig) {
+        setMapConfig({
+          name: mapDocument.name,
+          description: mapDocument.metadata?.description,
+          rows: mapDocument.dimensions.rows,
+          cols: mapDocument.dimensions.cols,
+          currentMapId: mapDocument.id
+        });
       }
       
       setIsDirty(false);
@@ -320,9 +359,24 @@ export const MapStorageProvider: React.FC<MapStorageProviderProps> = ({
       // Add processing delay
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      setLayers(autoSaveData.mapData.layers);
+      // Ensure props are initialized for backward compatibility
+      const loadedLayers = autoSaveData.mapData.layers.map(layer => ({
+        ...layer,
+        props: layer.props || []
+      }));
+      setLayers(loadedLayers);
       if (setGridLayer) {
         setGridLayer(autoSaveData.mapData.gridLayer);
+      }
+      
+      // Update map configuration with auto-saved map data
+      if (setMapConfig) {
+        setMapConfig({
+          name: autoSaveData.mapData.name,
+          description: autoSaveData.mapData.metadata?.description,
+          rows: autoSaveData.mapData.dimensions.rows,
+          cols: autoSaveData.mapData.dimensions.cols
+        });
       }
       
       setIsDirty(false);

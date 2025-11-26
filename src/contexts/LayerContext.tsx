@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { EnhancedLayer } from '../types/map';
 import { TileType } from '../types/textures';
+import { Prop } from '../types/props';
 import { AutotilingEngine } from '../utils/autotiling/AutotilingEngine';
 import { useUndoRedo } from './UndoRedoContext';
 import { Command } from '../types/commands';
 import { MapConfig } from '../components/CreateMapDialog';
+import { AddPropCommand, RemovePropCommand } from '../commands/PropCommand';
 
 interface GridLayer {
   id: 'grid-layer';
@@ -23,7 +25,9 @@ interface LayerContextType {
     description?: string;
     rows: number;
     cols: number;
+    currentMapId?: string; // ID of the currently loaded/saved map
   };
+  setMapConfig: (config: { name: string; description?: string; rows: number; cols: number; currentMapId?: string }) => void;
   initializeNewMap: (config: MapConfig) => Promise<void>;
   
   // Loading state
@@ -31,6 +35,7 @@ interface LayerContextType {
   
   // Core layer management
   layers: EnhancedLayer[];
+  setLayers: React.Dispatch<React.SetStateAction<EnhancedLayer[]>>;
   currentLayerIndex: number;
   
   // Layer operations
@@ -51,6 +56,12 @@ interface LayerContextType {
   updateLayerTile: (layerIndex: number, row: number, col: number, tileType: TileType) => void;
   updateLayerMatrix: (layerIndex: number, matrix: TileType[][]) => void;
   updateLayerTextureMatrix: (layerIndex: number, textureMatrix: string[][]) => void;
+  
+  // Prop management
+  addPropToLayer: (layerIndex: number, prop: Prop) => void;
+  updateLayerProps: (layerIndex: number, updater: (props: Prop[]) => Prop[]) => void;
+  updateProp: (layerIndex: number, propId: string, updates: Partial<Prop>) => void;
+  deletePropFromLayer: (layerIndex: number, propId: string) => void;
   
   // Utility functions
   getCurrentLayer: () => EnhancedLayer | undefined;
@@ -93,7 +104,8 @@ export const LayerProvider: React.FC<LayerProviderProps> = ({ children }) => {
     name: 'Untitled Map',
     description: undefined as string | undefined,
     rows: 11,
-    cols: 11
+    cols: 11,
+    currentMapId: undefined as string | undefined
   });
   
   // Generate unique ID for layers
@@ -123,6 +135,7 @@ export const LayerProvider: React.FC<LayerProviderProps> = ({ children }) => {
     visible: true,
     opacity: 1.0,
     matrix: createDefaultMatrix(),
+    props: [],
   }]);
   
   const [currentLayerIndex, setCurrentLayerIndex] = useState(0);
@@ -150,7 +163,8 @@ export const LayerProvider: React.FC<LayerProviderProps> = ({ children }) => {
         name: config.name,
         description: config.description,
         rows: config.rows,
-        cols: config.cols
+        cols: config.cols,
+        currentMapId: undefined // New map has no ID yet
       });
       
       // Small delay to show the loading screen
@@ -170,6 +184,7 @@ export const LayerProvider: React.FC<LayerProviderProps> = ({ children }) => {
         visible: true,
         opacity: 1.0,
         matrix: baseMatrix,
+        props: [],
       };
       
       // Step 3: Clear existing layers and autotiling engines
@@ -197,6 +212,17 @@ export const LayerProvider: React.FC<LayerProviderProps> = ({ children }) => {
     }
   }, [autotilingEngines, mapConfig.rows, mapConfig.cols]);
   
+  // Wrapper for setMapConfig to handle optional description
+  const updateMapConfig = useCallback((config: { name: string; description?: string; rows: number; cols: number; currentMapId?: string }) => {
+    setMapConfig({
+      name: config.name,
+      description: config.description,
+      rows: config.rows,
+      cols: config.cols,
+      currentMapId: config.currentMapId
+    });
+  }, []);
+  
   // Layer operations
   const addLayer = useCallback((name: string, insertIndex?: number) => {
     const newLayer: EnhancedLayer = {
@@ -205,6 +231,7 @@ export const LayerProvider: React.FC<LayerProviderProps> = ({ children }) => {
       visible: true,
       opacity: 1.0,
       matrix: createEmptyMatrix(),
+      props: [],
     };
     
     setLayers(prevLayers => {
@@ -250,6 +277,7 @@ export const LayerProvider: React.FC<LayerProviderProps> = ({ children }) => {
       opacity: layerToDuplicate.opacity,
       matrix: layerToDuplicate.matrix.map(row => [...row]),
       textureMatrix: layerToDuplicate.textureMatrix?.map(row => [...row]),
+      props: layerToDuplicate.props.map(p => ({...p})),
     };
     
     setLayers(prevLayers => {
@@ -461,7 +489,54 @@ export const LayerProvider: React.FC<LayerProviderProps> = ({ children }) => {
     // For texture matrix updates, we typically don't create separate undo commands
     // as they're usually part of the painting operation
     directUpdateLayerTextureMatrix(layerIndex, textureMatrix);
-  }, [isExecuting, directUpdateLayerTextureMatrix]);  // Utility functions
+  }, [isExecuting, directUpdateLayerTextureMatrix]);
+
+  // Prop management
+  const updateLayerProps = useCallback((layerIndex: number, updater: (props: Prop[]) => Prop[]) => {
+    setLayers(prevLayers =>
+      prevLayers.map((layer, i) =>
+        i === layerIndex ? { ...layer, props: updater(layer.props) } : layer
+      )
+    );
+  }, []);
+
+  const addPropToLayer = useCallback((layerIndex: number, prop: Prop) => {
+    if (isExecuting) {
+      // Direct update during undo/redo
+      updateLayerProps(layerIndex, (props) => [...props, prop]);
+      return;
+    }
+    
+    const command = new AddPropCommand(layerIndex, prop, updateLayerProps);
+    executeCommand(command);
+  }, [isExecuting, executeCommand, updateLayerProps]);
+
+  const updateProp = useCallback((layerIndex: number, propId: string, updates: Partial<Prop>) => {
+    updateLayerProps(layerIndex, (props) =>
+      props.map((p) => (p.id === propId ? { ...p, ...updates } : p))
+    );
+  }, [updateLayerProps]);
+
+  const deletePropFromLayer = useCallback((layerIndex: number, propId: string) => {
+    if (isExecuting) {
+      // Direct delete during undo/redo
+      updateLayerProps(layerIndex, (props) => props.filter((p) => p.id !== propId));
+      return;
+    }
+
+    // Find the prop and its index for undo
+    const layer = layers[layerIndex];
+    if (!layer) return;
+    
+    const propIndex = layer.props.findIndex((p) => p.id === propId);
+    const prop = layer.props[propIndex];
+    if (!prop) return;
+
+    const command = new RemovePropCommand(layerIndex, prop, propIndex, updateLayerProps);
+    executeCommand(command);
+  }, [layers, isExecuting, executeCommand, updateLayerProps]);
+
+  // Utility functions
   const getCurrentLayer = useCallback(() => {
     return layers[currentLayerIndex];
   }, [layers, currentLayerIndex]);
@@ -517,9 +592,11 @@ export const LayerProvider: React.FC<LayerProviderProps> = ({ children }) => {
   
   const value: LayerContextType = {
     mapConfig,
+    setMapConfig: updateMapConfig,
     initializeNewMap,
     isInitializingMap,
     layers,
+    setLayers,
     currentLayerIndex,
     addLayer,
     removeLayer,
@@ -532,6 +609,10 @@ export const LayerProvider: React.FC<LayerProviderProps> = ({ children }) => {
     updateLayerTile,
     updateLayerMatrix,
     updateLayerTextureMatrix,
+    addPropToLayer,
+    updateLayerProps,
+    updateProp,
+    deletePropFromLayer,
     getCurrentLayer,
     getLayerByIndex,
     getVisibleLayers,

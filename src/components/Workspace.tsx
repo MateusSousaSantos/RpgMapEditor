@@ -11,7 +11,9 @@ import { ToolIndicator } from "./WorkspaceUI/ToolIndicator";
 import { TileGrid } from "./WorkspaceUI/TileGrid";
 import { LayerLines } from "./WorkspaceUI/LayerLines";
 import { BoxSelectionPreview } from "./WorkspaceUI/BoxSelectionPreview";
+import { PropLayer } from "./WorkspaceUI/PropLayer";
 import { TILE_SIZE } from "../utils/textureUtils";
+import { Prop } from "../types/props";
 
 export const Workspace = React.memo(() => {
   const { currentTool, getToolDisplayName, selectedTileType, paintingMode } = useTool();
@@ -24,11 +26,15 @@ export const Workspace = React.memo(() => {
     updateLayerTextureMatrix,
     getVisibleLayers,
     gridLayer,
-    mapConfig
+    mapConfig,
+    addPropToLayer,
+    updateProp,
+    deletePropFromLayer
   } = useLayer();
   
   const stageRef = useRef<Konva.Stage | null>(null);
   const layerRef = useRef<Konva.Layer | null>(null);
+  const [selectedPropId, setSelectedPropId] = React.useState<string | null>(null);
 
   // Viewport management
   const { stageScale, stagePos, handleWheel } = useViewport(5);
@@ -61,9 +67,14 @@ export const Workspace = React.memo(() => {
   }, [paintingMode, paintingTool.setPaintingMode]);
 
   // Handle stage events for painting
-  const handleStageMouseDown = () => {
+  const handleStageMouseDown = (e: any) => {
     if (currentTool === 'draw') {
       paintingTool.handleMouseDown();
+    }
+    // Deselect prop when clicking on empty space
+    const clickedOnEmpty = e.target === e.target.getStage();
+    if (clickedOnEmpty) {
+      setSelectedPropId(null);
     }
   };
 
@@ -100,8 +111,52 @@ export const Workspace = React.memo(() => {
     // This handler satisfies ReactKonva's requirement for drag events
   }, []);
 
+  // Handle prop drop from sidebar
+  const handleDrop = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    
+    const propType = e.dataTransfer.getData('propType');
+    const propSrc = e.dataTransfer.getData('propSrc');
+    const propWidth = parseInt(e.dataTransfer.getData('propWidth') || '32', 10);
+    const propHeight = parseInt(e.dataTransfer.getData('propHeight') || '32', 10);
+    
+    if (!propType || !propSrc) return;
+    
+    const stage = stageRef.current;
+    if (!stage) return;
+    
+    // Get the container div position
+    const container = stage.container();
+    const containerRect = container.getBoundingClientRect();
+    
+    // Calculate position relative to stage
+    const x = (e.clientX - containerRect.left - stagePos.x) / stageScale;
+    const y = (e.clientY - containerRect.top - stagePos.y) / stageScale;
+    
+    // Create new prop
+    const newProp: Prop = {
+      id: `prop_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: propType,
+      x,
+      y,
+      width: propWidth,
+      height: propHeight,
+      src: propSrc,
+    };
+    
+    addPropToLayer(currentLayerIndex, newProp);
+  }, [stagePos.x, stagePos.y, stageScale, currentLayerIndex, addPropToLayer]);
+
+  const handleDragOver = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+  }, []);
+
   return (
-    <div className="relative w-full h-full">
+    <div 
+      className="relative w-full h-full"
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+    >
       <ToolIndicator
         currentTool={currentTool}
         getToolDisplayName={getToolDisplayName}
@@ -141,16 +196,27 @@ export const Workspace = React.memo(() => {
           {getVisibleLayers().map((layer) => {
             const layerIndex = layers.findIndex(l => l.id === layer.id);
             return (
-              <TileGrid 
-                key={layer.id}
-                layer={layer} 
-                rows={mapConfig.rows} 
-                cols={mapConfig.cols} 
-                onTileClick={handleTileClick}
-                useAutotiling={true}
-                opacity={layer.opacity}
-                isCurrentLayer={layerIndex === currentLayerIndex}
-              />
+              <React.Fragment key={layer.id}>
+                <TileGrid 
+                  layer={layer} 
+                  rows={mapConfig.rows} 
+                  cols={mapConfig.cols} 
+                  onTileClick={handleTileClick}
+                  useAutotiling={true}
+                  opacity={layer.opacity}
+                  isCurrentLayer={layerIndex === currentLayerIndex}
+                />
+                {layer.props && layer.props.length > 0 && (
+                  <PropLayer 
+                    props={layer.props} 
+                    layerIndex={layerIndex}
+                    onPropUpdate={updateProp}
+                    onPropDelete={deletePropFromLayer}
+                    selectedPropId={selectedPropId}
+                    onSelectProp={setSelectedPropId}
+                  />
+                )}
+              </React.Fragment>
             );
           })}
           

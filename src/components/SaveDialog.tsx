@@ -1,20 +1,30 @@
 // src/components/SaveDialog.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMapStorage } from '../contexts/MapStorageContext';
+import { useLayer } from '../contexts/LayerContext';
 
 interface SaveDialogProps {
   onClose: () => void;
+  autoSave?: boolean; // If true, save immediately without showing dialog
 }
 
-export const SaveDialog: React.FC<SaveDialogProps> = ({ onClose }) => {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+export const SaveDialog: React.FC<SaveDialogProps> = ({ onClose, autoSave = false }) => {
+  const { mapConfig, setMapConfig } = useLayer();
+  const [name, setName] = useState(mapConfig.name || '');
+  const [description, setDescription] = useState(mapConfig.description || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   
   const { saveMap, getStorageStats } = useMapStorage();
   const stats = getStorageStats();
+
+  // Auto-save on mount if autoSave is true and map already has an ID
+  useEffect(() => {
+    if (autoSave && mapConfig.currentMapId) {
+      handleSave();
+    }
+  }, [autoSave]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -26,7 +36,8 @@ export const SaveDialog: React.FC<SaveDialogProps> = ({ onClose }) => {
     setError('');
     
     try {
-      await saveMap(name.trim(), description.trim() || undefined);
+      await saveMap(name.trim(), description.trim() || undefined, mapConfig.currentMapId);
+      // Update the map name in LayerContext after saving (saveMap now handles currentMapId)
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save map');
@@ -34,6 +45,36 @@ export const SaveDialog: React.FC<SaveDialogProps> = ({ onClose }) => {
       setSaving(false);
     }
   };
+
+  // If auto-saving and still processing, show loading state
+  if (autoSave && saving) {
+    return (
+      <div className="bg-slate-800 rounded-lg p-6 w-96 max-w-[90vw]">
+        <div className="flex items-center justify-center space-x-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <div className="text-white">Saving {mapConfig.name}...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // If auto-save failed, show error
+  if (autoSave && error) {
+    return (
+      <div className="bg-slate-800 rounded-lg p-6 w-96 max-w-[90vw]">
+        <h2 className="text-xl font-bold text-white mb-4">Save Failed</h2>
+        <div className="text-red-400 text-sm bg-red-900/20 p-2 rounded border border-red-800 mb-4">
+          {error}
+        </div>
+        <button
+          onClick={onClose}
+          className="w-full px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded transition-colors"
+        >
+          Close
+        </button>
+      </div>
+    );
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && e.ctrlKey) {
