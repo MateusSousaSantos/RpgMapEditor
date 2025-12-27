@@ -84,3 +84,61 @@ export class RemovePropCommand implements Command {
     }
   }
 }
+
+export class UpdatePropCommand implements Command {
+  public readonly id: string;
+  public readonly timestamp: number;
+  public readonly description: string;
+  
+  private layerIndex: number;
+  private propId: string;
+  private oldProp: Prop;
+  private newProp: Prop;
+  private updateLayerProps?: (layerIndex: number, updater: (props: Prop[]) => Prop[]) => void;
+
+  constructor(
+    layerIndex: number,
+    propId: string,
+    oldProp: Prop,
+    newProp: Prop,
+    updateLayerProps?: (layerIndex: number, updater: (props: Prop[]) => Prop[]) => void
+  ) {
+    this.layerIndex = layerIndex;
+    this.propId = propId;
+    this.oldProp = oldProp;
+    this.newProp = newProp;
+    this.updateLayerProps = updateLayerProps;
+    this.id = generateCommandId('update_prop');
+    this.timestamp = Date.now();
+    
+    // Determine what changed for description
+    const changes: string[] = [];
+    if (oldProp.x !== newProp.x || oldProp.y !== newProp.y) {
+      changes.push('position');
+    }
+    if (oldProp.width !== newProp.width || oldProp.height !== newProp.height) {
+      changes.push('size');
+    }
+    if ((oldProp.rotation || 0) !== (newProp.rotation || 0)) {
+      changes.push('rotation');
+    }
+    
+    this.description = `Update prop '${newProp.type}': ${changes.join(', ') || 'attributes'}`;
+  }
+
+  execute(): void {
+    if (this.updateLayerProps) {
+      this.updateLayerProps(this.layerIndex, (props) =>
+        props.map(p => (p.id === this.propId ? this.newProp : p))
+      );
+    }
+  }
+
+  undo(): void {
+    if (this.updateLayerProps) {
+      this.updateLayerProps(this.layerIndex, (props) =>
+        props.map(p => (p.id === this.propId ? this.oldProp : p))
+      );
+    }
+  }
+}

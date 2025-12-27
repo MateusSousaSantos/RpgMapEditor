@@ -1,13 +1,15 @@
 // src/contexts/UndoRedoContext.tsx
 
-import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from 'react';
 import { Command } from '../types/commands';
+import { createBatchCommand } from '../commands/BatchCommand';
 
 interface UndoRedoState {
   undoStack: Command[];
   redoStack: Command[];
   maxHistorySize: number;
   isExecuting: boolean; // Prevents undo operations from creating new commands
+  isBatchMode: boolean; // When true, commands are queued instead of executed immediately
 }
 
 interface UndoRedoContextType {
@@ -19,7 +21,12 @@ interface UndoRedoContextType {
   
   // Command execution
   executeCommand: (command: Command) => void;
-  batchCommands: (commands: Command[], description: string) => void;
+  batchCommands: (commands: Command[], description?: string) => void;
+  
+  // Batch mode for automatic command grouping
+  startBatch: (description?: string) => void;
+  endBatch: () => void;
+  isBatchMode: boolean;
   
   // History management
   getUndoDescription: () => string | null;
@@ -49,12 +56,23 @@ export const UndoRedoProvider: React.FC<UndoRedoProviderProps> = ({
     undoStack: [],
     redoStack: [],
     maxHistorySize,
-    isExecuting: false
+    isExecuting: false,
+    isBatchMode: false
   });
+
+  // Refs for batch mode (don't trigger re-renders)
+  const batchQueueRef = useRef<Command[]>([]);
+  const batchDescriptionRef = useRef<string | undefined>(undefined);
 
   // Execute a command and add to undo stack
   const executeCommand = useCallback((command: Command) => {
     if (state.isExecuting) return; // Prevent recursive commands during undo/redo
+    
+    // If in batch mode, queue the command instead of executing
+    if (state.isBatchMode) {
+      batchQueueRef.current.push(command);
+      return;
+    }
     
     try {
       // Set executing flag to prevent nested command creation
@@ -86,26 +104,46 @@ export const UndoRedoProvider: React.FC<UndoRedoProviderProps> = ({
   }, [state.isExecuting]);
 
   // Batch multiple commands into a single undo operation
-  const batchCommands = useCallback((commands: Command[], description: string) => {
+  const batchCommands = useCallback((commands: Command[], description?: string) => {
     if (commands.length === 0) return;
     
-    const batchCommand: Command = {
-      id: `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: Date.now(),
-      description,
-      execute: () => {
-        commands.forEach(cmd => cmd.execute());
-      },
-      undo: () => {
-        // Undo in reverse order
-        for (let i = commands.length - 1; i >= 0; i--) {
-          commands[i].undo();
-        }
-      }
-    };
-    
+    const batchCommand = createBatchCommand(commands, description);
     executeCommand(batchCommand);
   }, [executeCommand]);
+
+  // Start batch mode - commands will be queued until endBatch is called
+  const startBatch = useCallback((description?: string) => {
+    if (state.isBatchMode) {
+      console.warn('Batch mode already active');
+      return;
+    }
+    
+    batchQueueRef.current = [];
+    batchDescriptionRef.current = description;
+    setState(prev => ({ ...prev, isBatchMode: true }));
+  }, [state.isBatchMode]);
+
+  // End batch mode - execute all queued commands as a batch
+  const endBatch = useCallback(() => {
+    if (!state.isBatchMode) {
+      console.warn('Batch mode not active');
+      return;
+    }
+    
+    setState(prev => ({ ...prev, isBatchMode: false }));
+    
+    const commands = batchQueueRef.current;
+    const description = batchDescriptionRef.current;
+    
+    // Clear refs
+    batchQueueRef.current = [];
+    batchDescriptionRef.current = undefined;
+    
+    // Execute as batch if we have commands
+    if (commands.length > 0) {
+      batchCommands(commands, description);
+    }
+  }, [state.isBatchMode, batchCommands]);
 
   // Undo the last command
   const undo = useCallback(() => {
@@ -200,6 +238,9 @@ export const UndoRedoProvider: React.FC<UndoRedoProviderProps> = ({
     canRedo: state.redoStack.length > 0,
     executeCommand,
     batchCommands,
+    startBatch,
+    endBatch,
+    isBatchMode: state.isBatchMode,
     getUndoDescription,
     getRedoDescription,
     clearHistory,

@@ -23,3 +23,4 @@ export * from './LayerPropertyCommand';
 export * from './LayerOperationCommand';
 export * from './GridConfigCommand';
 export * from './PropCommand';
+export * from './BatchCommand';

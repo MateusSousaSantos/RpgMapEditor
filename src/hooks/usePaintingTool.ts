@@ -1,21 +1,12 @@
 // src/hooks/usePaintingTool.ts
-import React, { useCallback, useState, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import Konva from 'konva';
 import { TileType } from '../types/textures';
 import { AutotilingEngine, BatchUpdateResult } from '../utils/autotiling/AutotilingEngine';
 import { Layer } from '../components/WorkspaceUI/TileGrid';
-
-export type PaintingMode = 'single' | 'box'; // Remove 'drag' as it's now automatic
-
-interface PaintingState {
-  isActive: boolean;
-  mode: PaintingMode;
-  startPosition: { row: number; col: number } | null;
-  currentPosition: { row: number; col: number } | null;
-  draggedTiles: Set<string>;
-  isDragging: boolean; // Track if user is actually dragging
-  dragThreshold: number; // Minimum distance to consider it a drag
-}
+import { useTileSelection } from './useTileSelection';
+import { usePaintingMode, type PaintingMode } from './usePaintingMode';
+import { usePaintingState } from './usePaintingState';
 
 interface UsePaintingToolProps {
   setLayers?: React.Dispatch<React.SetStateAction<Layer[]>>; // Legacy support
@@ -31,6 +22,8 @@ interface UsePaintingToolProps {
   stageRef: React.RefObject<Konva.Stage | null>;
 }
 
+export type { PaintingMode };
+
 export const usePaintingTool = ({
   setLayers,
   updateLayerMatrix,
@@ -44,69 +37,35 @@ export const usePaintingTool = ({
   autotilingEngine,
   stageRef
 }: UsePaintingToolProps) => {
+  // Use extracted hooks for specific concerns
+  const { getTilePosition, getMousePosition, calculateDistance } = useTileSelection({
+    rows,
+    cols,
+    tileSize,
+    stageRef
+  });
+
+  const { mode: paintingMode, setPaintingMode } = usePaintingMode({ initialMode: 'single' });
+
+  const {
+    paintingState,
+    previewBoxSelection,
+    mouseStartPos,
+    startPainting,
+    updatePosition,
+    addDraggedTile,
+    updateBoxPreview,
+    resetPainting,
+    wasDraggedAlready
+  } = usePaintingState();
+
   // Stable references to prevent callback recreation
   const stableUpdateLayerMatrix = useMemo(() => updateLayerMatrix, [updateLayerMatrix]);
   const stableUpdateLayerTextureMatrix = useMemo(() => updateLayerTextureMatrix, [updateLayerTextureMatrix]);
   const stableGetCurrentLayer = useMemo(() => getCurrentLayer, [getCurrentLayer]);
 
-  const [paintingState, setPaintingState] = useState<PaintingState>({
-    isActive: false,
-    mode: 'single',
-    startPosition: null,
-    currentPosition: null,
-    draggedTiles: new Set(),
-    isDragging: false,
-    dragThreshold: 5 // pixels
-  });
-
-  const [previewBoxSelection, setPreviewBoxSelection] = useState<{
-    startRow: number;
-    startCol: number;
-    endRow: number;
-    endCol: number;
-  } | null>(null);
-
-  const [mouseStartPos, setMouseStartPos] = useState<{ x: number; y: number } | null>(null);
-
-  // Get tile position from stage coordinates
-  const getTilePosition = useCallback(() => {
-    if (!stageRef.current) return null;
-    
-    const stage = stageRef.current;
-    const pointerPos = stage.getPointerPosition();
-    if (!pointerPos) return null;
-    
-    // Transform screen coordinates to stage coordinates
-    const transform = stage.getAbsoluteTransform().copy();
-    transform.invert();
-    
-    const pos = transform.point(pointerPos);
-    const col = Math.floor(pos.x / tileSize);
-    const row = Math.floor(pos.y / tileSize);
-    
-    if (row >= 0 && row < rows && col >= 0 && col < cols) {
-      return { row, col };
-    }
-    return null;
-  }, [rows, cols, tileSize, stageRef]);
-
-  // Get mouse position (screen coordinates for drag detection)
-  const getMousePosition = useCallback(() => {
-    if (!stageRef.current) return null;
-    
-    const stage = stageRef.current;
-    const pointerPos = stage.getPointerPosition();
-    return pointerPos;
-  }, [stageRef]);
-
-  // Calculate distance between two points
-  const calculateDistance = useCallback((pos1: { x: number; y: number }, pos2: { x: number; y: number }) => {
-    const dx = pos2.x - pos1.x;
-    const dy = pos2.y - pos1.y;
-    return Math.sqrt(dx * dx + dy * dy);
-  }, []);
-
-  // Apply tile updates with autotiling
+  // Memoize applyTileUpdates to prevent recreating on every render
+  // Only recreates when autotilingEngine, selectedTileType, or layer update functions change
   const applyTileUpdates = useCallback((tilesToUpdate: { row: number; col: number }[]) => {
     if (!autotilingEngine || tilesToUpdate.length === 0) return;
 
@@ -258,33 +217,19 @@ export const usePaintingTool = ({
     applyTileUpdates(tilesToUpdate);
   }, [applyTileUpdates, rows, cols]);
 
-  // Set painting mode
-  const setPaintingMode = useCallback((mode: PaintingMode) => {
-    setPaintingState(prev => ({ ...prev, mode }));
-  }, []);
-
   // Mouse event handlers
   const handleMouseDown = useCallback(() => {
     const pos = getTilePosition();
     const mousePos = getMousePosition();
     if (!pos || !mousePos) return;
 
-    setMouseStartPos(mousePos);
-    setPaintingState(prev => ({
-      ...prev,
-      isActive: true,
-      startPosition: pos,
-      currentPosition: pos,
-      draggedTiles: new Set([`${pos.row}-${pos.col}`]),
-      isDragging: false
-    }));
+    startPainting(pos, mousePos);
 
-    // Don't paint immediately - wait to see if user is clicking or dragging
     // Disable stage dragging when painting starts
     if (stageRef.current) {
       stageRef.current.draggable(false);
     }
-  }, [getTilePosition, getMousePosition, stageRef]);
+  }, [getTilePosition, getMousePosition, startPainting, stageRef]);
 
   const handleMouseMove = useCallback(() => {
     if (!paintingState.isActive || !paintingState.startPosition || !mouseStartPos) return;
@@ -298,52 +243,46 @@ export const usePaintingTool = ({
     const wasDragging = paintingState.isDragging;
     const isDragging = distance > paintingState.dragThreshold;
 
-    // Only update state if there's a meaningful change to prevent excessive re-renders
-    const hasPositionChanged = !paintingState.currentPosition || 
-      pos.row !== paintingState.currentPosition.row || 
-      pos.col !== paintingState.currentPosition.col;
-    const hasDragStateChanged = isDragging !== paintingState.isDragging;
-
-    if (hasPositionChanged || hasDragStateChanged) {
-      setPaintingState(prev => ({ 
-        ...prev, 
-        currentPosition: pos,
-        isDragging 
-      }));
-    }
+    updatePosition(pos, currentMousePos, isDragging);
 
     // If user just started dragging, paint the initial tile
-    if (!wasDragging && isDragging && paintingState.mode === 'single') {
+    if (!wasDragging && isDragging && paintingMode === 'single') {
       paintSingleTile(paintingState.startPosition.row, paintingState.startPosition.col);
     }
 
-    if (paintingState.mode === 'single' && isDragging) {
+    if (paintingMode === 'single' && isDragging) {
       // Drag painting mode - paint tiles as user drags
-      const tileKey = `${pos.row}-${pos.col}`;
-      if (!paintingState.draggedTiles.has(tileKey)) {
-        setPaintingState(prev => ({
-          ...prev,
-          draggedTiles: new Set([...prev.draggedTiles, tileKey])
-        }));
+      if (!wasDraggedAlready(pos.row, pos.col)) {
+        addDraggedTile(pos.row, pos.col);
         paintSingleTile(pos.row, pos.col);
       }
-    } else if (paintingState.mode === 'box') {
+    } else if (paintingMode === 'box') {
       // Box selection mode - update preview
-      setPreviewBoxSelection({
+      updateBoxPreview({
         startRow: paintingState.startPosition.row,
         startCol: paintingState.startPosition.col,
         endRow: pos.row,
         endCol: pos.col
       });
     }
-  }, [paintingState, getTilePosition, getMousePosition, mouseStartPos, calculateDistance, paintSingleTile]);
+  }, [
+    paintingState,
+    getTilePosition,
+    getMousePosition,
+    mouseStartPos,
+    calculateDistance,
+    paintingMode,
+    paintSingleTile,
+    addDraggedTile,
+    wasDraggedAlready,
+    updatePosition,
+    updateBoxPreview
+  ]);
 
   const handleMouseUp = useCallback(() => {
     if (!paintingState.isActive || !paintingState.startPosition) {
-      setPaintingState(prev => ({ ...prev, isActive: false, isDragging: false }));
-      setPreviewBoxSelection(null);
-      setMouseStartPos(null);
-      
+      resetPainting();
+
       // Re-enable stage dragging
       if (stageRef.current) {
         stageRef.current.draggable(true);
@@ -353,7 +292,7 @@ export const usePaintingTool = ({
 
     const currentPos = paintingState.currentPosition;
 
-    if (paintingState.mode === 'box' && currentPos) {
+    if (paintingMode === 'box' && currentPos) {
       // Box selection mode - paint the selected area
       paintBoxSelection(
         paintingState.startPosition.row,
@@ -361,30 +300,19 @@ export const usePaintingTool = ({
         currentPos.row,
         currentPos.col
       );
-    } else if (paintingState.mode === 'single' && !paintingState.isDragging) {
+    } else if (paintingMode === 'single' && !paintingState.isDragging) {
       // Single click mode - paint only the clicked tile
       paintSingleTile(paintingState.startPosition.row, paintingState.startPosition.col);
     }
     // If user was dragging in single mode, tiles were already painted during drag
 
-    setPaintingState({
-      isActive: false,
-      mode: paintingState.mode,
-      startPosition: null,
-      currentPosition: null,
-      draggedTiles: new Set(),
-      isDragging: false,
-      dragThreshold: paintingState.dragThreshold
-    });
-
-    setPreviewBoxSelection(null);
-    setMouseStartPos(null);
+    resetPainting();
 
     // Re-enable stage dragging
     if (stageRef.current) {
       stageRef.current.draggable(true);
     }
-  }, [paintingState, paintBoxSelection, paintSingleTile, stageRef]);
+  }, [paintingState, paintingMode, paintBoxSelection, paintSingleTile, resetPainting, stageRef]);
 
   // Handle tile click for direct tile interaction (when not using mouse events)
   const handleTileClick = useCallback((row: number, col: number) => {
@@ -397,6 +325,7 @@ export const usePaintingTool = ({
   return {
     paintingState,
     previewBoxSelection,
+    paintingMode,
     setPaintingMode,
     handleMouseDown,
     handleMouseMove,
