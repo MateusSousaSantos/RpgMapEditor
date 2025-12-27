@@ -11,7 +11,6 @@ export const useTextureLoader = (src: string) => {
     img.onload = () => {
       setTexture(img);
       setImageError(null);
-      console.log(`Texture loaded successfully: ${src}`);
     };
     img.onerror = (error) => {
       console.error(`Failed to load texture: ${src}`, error);

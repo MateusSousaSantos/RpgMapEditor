@@ -6,6 +6,7 @@ import { TILE_SIZE } from "../../utils/textureUtils";
 import { 
   GRASS_AUTOTILING_TEXTURES,
   WATER_AUTOTILING_TEXTURES,
+  WALL_AUTOTILING_TEXTURES,
   type TileType 
 } from "../../types/textures";
 import { AutotilingEngine, type TileUpdate } from "../../utils/autotiling";
@@ -209,6 +210,11 @@ export const useTextureManager = () => {
         image_url: texture.image_url
       })),
       ...WATER_AUTOTILING_TEXTURES.map(texture => ({
+        id: texture.id,
+        name: texture.name,
+        image_url: texture.image_url
+      })),
+      ...WALL_AUTOTILING_TEXTURES.map(texture => ({
         id: texture.id,
         name: texture.name,
         image_url: texture.image_url

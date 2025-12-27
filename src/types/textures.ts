@@ -13,7 +13,7 @@ export interface AutotilingTexture {
     name: string;
     image_url: string;
     tileType: string;
-    variant: AutotilingVariant;
+    variant: AutotilingVariant | WallTilingVariant;
     connectivityMask: number; // Bitmask representing required connections
 }
 
@@ -55,6 +55,64 @@ export const AutotilingVariant = {
 } as const;
 
 export type AutotilingVariant = typeof AutotilingVariant[keyof typeof AutotilingVariant];
+
+// Wall tiling variants (positional variants for wall structures)
+export const WallTilingVariant = {
+    BOTTOM_LEFT: "bottom_left",
+    BOTTOM_RIGHT: "bottom_right",
+    BOTTOM_VERTICAL_EDGE: "bottom_vertical_edge",
+
+    CROSS: "cross",
+    FULL_CROSS_TOP_LEFT: "full_cross_top_left",
+    FULL_CROSS_TOP_RIGHT: "full_cross_top_right",
+    FULL_CROSS_BOTTOM_LEFT: "full_cross_bottom_left",
+    FULL_CROSS_BOTTOM_RIGHT: "full_cross_bottom_right",
+
+    FULL_CROSS_TOP_LEFT_BOTTOM_RIGHT: "full_cross_top_left_bottom_right",
+    FULL_CROSS_TOP_RIGHT_BOTTOM_LEFT: "full_cross_top_right_bottom_left",
+
+    FULL_BOTTOM_CENTER: "full_bottom_center",
+    FULL_BOTTOM_LEFT: "full_bottom_left",
+    FULL_BOTTOM_LEFT_CORNER: "full_bottom_left_corner",
+    FULL_BOTTOM_RIGHT: "full_bottom_right",
+    FULL_BOTTOM_RIGHT_CORNER: "full_bottom_right_corner",
+    FULL_CENTER: "full_center",
+    FULL_CENTER_LEFT: "full_center_left",
+    FULL_CENTER_RIGHT: "full_center_right",
+    FULL_TOP_CENTER: "full_top_center",
+    FULL_TOP_LEFT: "full_top_left",
+    FULL_TOP_LEFT_CORNER: "full_top_left_corner",
+    FULL_TOP_RIGHT: "full_top_right",
+    FULL_TOP_RIGHT_CORNER: "full_top_right_corner",
+    
+    FULL_T_BOTTOM_LEFT: "full_t_bottom_left",
+    FULL_T_BOTTOM_RIGHT: "full_t_bottom_right",
+    FULL_T_BOTTOM_RIGHT_LEFT: "full_t_bottom_right_left",
+    FULL_T_LEFT_BOTTOM: "full_t_left_bottom",
+    FULL_T_LEFT_TOP: "full_t_left_top",
+    FULL_T_LEFT_TOP_BOTTOM: "full_t_left_top_bottom",
+    FULL_T_RIGHT_BOTTOM: "full_t_right_bottom",
+    FULL_T_RIGHT_TOP: "full_t_right_top",
+    FULL_T_RIGHT_TOP_BOTTOM: "full_t_right_top_bottom",
+    FULL_T_TOP_LEFT: "full_t_top_left",
+    FULL_T_TOP_RIGHT: "full_t_top_right",
+    FULL_T_TOP_RIGHT_LEFT: "full_t_top_right_left",
+
+    HORIZONTAL: "horizontal",
+    LEFT_HORIZONTAL_EDGE: "left_horizontal_edge",
+    RIGHT_HORIZONTAL_EDGE: "right_horizontal_edge",
+    SINGLE: "single",
+    T_BOTTOM: "t_bottom",
+    T_LEFT: "t_left",  
+    T_RIGHT: "t_right",
+    T_TOP: "t_top",
+    TOP_LEFT: "top_left",
+    TOP_RIGHT: "top_right",
+    TOP_VERTICAL_EDGE: "top_vertical_edge",
+    VERTICAL: "vertical"
+} as const;
+
+export type WallTilingVariant = typeof WallTilingVariant[keyof typeof WallTilingVariant];
 
 // Direction bitmask constants for 8-neighbor analysis
 export const DIRECTION_MASKS = {
@@ -174,8 +232,200 @@ export const WATER_AUTOTILING_TEXTURES: AutotilingTexture[] = [
     }
 ];
 
+// Wall autotiling texture definitions (all positional variants)
+export const WALL_AUTOTILING_TEXTURES: AutotilingTexture[] = [
+    {
+        id: "wall_bottom_left", name: "Wall Bottom Left", image_url: "/assets/walls/wood/bottom_left.png",
+        tileType: "wall", variant: WallTilingVariant.BOTTOM_LEFT, connectivityMask: 0
+    },
+    {
+        id: "wall_bottom_right", name: "Wall Bottom Right", image_url: "/assets/walls/wood/bottom_right.png",
+        tileType: "wall", variant: WallTilingVariant.BOTTOM_RIGHT, connectivityMask: 0
+    },
+    {
+        id: "wall_bottom_vertical_edge", name: "Wall Bottom Vertical Edge", image_url: "/assets/walls/wood/bottom_vertical_edge.png",
+        tileType: "wall", variant: WallTilingVariant.BOTTOM_VERTICAL_EDGE, connectivityMask: 0
+    },
+    {
+        id: "wall_cross", name: "Wall Cross", image_url: "/assets/walls/wood/cross.png",
+        tileType: "wall", variant: WallTilingVariant.CROSS, connectivityMask: 0
+    },
+    {
+        id: "wall_full_bottom_center", name: "Wall Full Bottom Center", image_url: "/assets/walls/wood/full_bottom_center.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_BOTTOM_CENTER, connectivityMask: 0
+    },
+    {
+        id: "wall_full_bottom_left", name: "Wall Full Bottom Left", image_url: "/assets/walls/wood/full_bottom_left.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_BOTTOM_LEFT, connectivityMask: 0
+    },
+    {
+        id: "wall_full_bottom_left_corner", name: "Wall Full Bottom Left Corner", image_url: "/assets/walls/wood/full_bottom_left_corner.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_BOTTOM_LEFT_CORNER, connectivityMask: 0
+    },
+    {
+        id: "wall_full_bottom_right", name: "Wall Full Bottom Right", image_url: "/assets/walls/wood/full_bottom_right.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_BOTTOM_RIGHT, connectivityMask: 0
+    },
+    {
+        id: "wall_full_bottom_right_corner", name: "Wall Full Bottom Right Corner", image_url: "/assets/walls/wood/full_bottom_right_corner.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_BOTTOM_RIGHT_CORNER, connectivityMask: 0
+    },
+    {
+        id: "wall_full_center", name: "Wall Full Center", image_url: "/assets/walls/wood/full_center.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_CENTER, connectivityMask: 0
+    },
+    {
+        id: "wall_full_center_left", name: "Wall Full Center Left", image_url: "/assets/walls/wood/full_center_left.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_CENTER_LEFT, connectivityMask: 0
+    },
+    {
+        id: "wall_full_center_right", name: "Wall Full Center Right", image_url: "/assets/walls/wood/full_center_right.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_CENTER_RIGHT, connectivityMask: 0
+    },
+    {
+        id: "wall_full_top_center", name: "Wall Full Top Center", image_url: "/assets/walls/wood/full_top_center.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_TOP_CENTER, connectivityMask: 0
+    },
+    {
+        id: "wall_full_top_left", name: "Wall Full Top Left", image_url: "/assets/walls/wood/full_top_left.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_TOP_LEFT, connectivityMask: 0
+    },
+    {
+        id: "wall_full_top_left_corner", name: "Wall Full Top Left Corner", image_url: "/assets/walls/wood/full_top_left_corner.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_TOP_LEFT_CORNER, connectivityMask: 0
+    },
+    {
+        id: "wall_full_top_right", name: "Wall Full Top Right", image_url: "/assets/walls/wood/full_top_right.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_TOP_RIGHT, connectivityMask: 0
+    },
+    {
+        id: "wall_full_top_right_corner", name: "Wall Full Top Right Corner", image_url: "/assets/walls/wood/full_top_right_corner.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_TOP_RIGHT_CORNER, connectivityMask: 0
+    },
+    {
+        id: "wall_full_t_bottom_left", name: "Wall Full T Bottom Left", image_url: "/assets/walls/wood/full_t_bottom_left.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_T_BOTTOM_LEFT, connectivityMask: 0
+    },
+    {
+        id: "wall_full_t_bottom_right", name: "Wall Full T Bottom Right", image_url: "/assets/walls/wood/full_t_bottom_right.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_T_BOTTOM_RIGHT, connectivityMask: 0
+    },
+    {
+        id: "wall_full_t_bottom_right_left", name: "Wall Full T Bottom Right Left", image_url: "/assets/walls/wood/full_t_bottom_right_left.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_T_BOTTOM_RIGHT_LEFT, connectivityMask: 0
+    },
+    {
+        id: "wall_full_t_left_bottom", name: "Wall Full T Left Bottom", image_url: "/assets/walls/wood/full_t_left_bottom.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_T_LEFT_BOTTOM, connectivityMask: 0
+    },
+    {
+        id: "wall_full_t_left_top", name: "Wall Full T Left Top", image_url: "/assets/walls/wood/full_t_left_top.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_T_LEFT_TOP, connectivityMask: 0
+    },
+    {
+        id: "wall_full_t_left_top_bottom", name: "Wall Full T Left Top Bottom", image_url: "/assets/walls/wood/full_t_left_top_bottom.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_T_LEFT_TOP_BOTTOM, connectivityMask: 0
+    },
+    {
+        id: "wall_full_t_right_bottom", name: "Wall Full T Right Bottom", image_url: "/assets/walls/wood/full_t_right_bottom.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_T_RIGHT_BOTTOM, connectivityMask: 0
+    },
+    {
+        id: "wall_full_t_right_top", name: "Wall Full T Right Top", image_url: "/assets/walls/wood/full_t_right_top.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_T_RIGHT_TOP, connectivityMask: 0
+    },
+    {
+        id: "wall_full_t_right_top_bottom", name: "Wall Full T Right Top Bottom", image_url: "/assets/walls/wood/full_t_right_top_bottom.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_T_RIGHT_TOP_BOTTOM, connectivityMask: 0
+    },
+    {
+        id: "wall_full_t_top_left", name: "Wall Full T Top Left", image_url: "/assets/walls/wood/full_t_top_left.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_T_TOP_LEFT, connectivityMask: 0
+    },
+    {
+        id: "wall_full_t_top_right", name: "Wall Full T Top Right", image_url: "/assets/walls/wood/full_t_top_right.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_T_TOP_RIGHT, connectivityMask: 0
+    },
+    {
+        id: "wall_full_t_top_right_left", name: "Wall Full T Top Right Left", image_url: "/assets/walls/wood/full_t_top_right_left.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_T_TOP_RIGHT_LEFT, connectivityMask: 0
+    },
+    {
+        id: "wall_horizontal", name: "Wall Horizontal", image_url: "/assets/walls/wood/horizontal.png",
+        tileType: "wall", variant: WallTilingVariant.HORIZONTAL, connectivityMask: 0
+    },
+    {
+        id: "wall_left_horizontal_edge", name: "Wall Left Horizontal Edge", image_url: "/assets/walls/wood/left_horizontal_edge.png",
+        tileType: "wall", variant: WallTilingVariant.LEFT_HORIZONTAL_EDGE, connectivityMask: 0
+    },
+    {
+        id: "wall_right_horizontal_edge", name: "Wall Right Horizontal Edge", image_url: "/assets/walls/wood/right_horizontal_edge.png",
+        tileType: "wall", variant: WallTilingVariant.RIGHT_HORIZONTAL_EDGE, connectivityMask: 0
+    },
+    {
+        id: "wall_single", name: "Wall Single", image_url: "/assets/walls/wood/single.png",
+        tileType: "wall", variant: WallTilingVariant.SINGLE, connectivityMask: 0
+    },
+    {
+        id: "wall_t_bottom", name: "Wall T Bottom", image_url: "/assets/walls/wood/t_bottom.png",
+        tileType: "wall", variant: WallTilingVariant.T_BOTTOM, connectivityMask: 0
+    },
+    {
+        id: "wall_t_left", name: "Wall T Left", image_url: "/assets/walls/wood/t_left.png",
+        tileType: "wall", variant: WallTilingVariant.T_LEFT, connectivityMask: 0
+    },
+    {
+        id: "wall_t_right", name: "Wall T Right", image_url: "/assets/walls/wood/t_right.png",
+        tileType: "wall", variant: WallTilingVariant.T_RIGHT, connectivityMask: 0
+    },
+    {
+        id: "wall_t_top", name: "Wall T Top", image_url: "/assets/walls/wood/t_top.png",
+        tileType: "wall", variant: WallTilingVariant.T_TOP, connectivityMask: 0
+    },
+    {
+        id: "wall_top_left", name: "Wall Top Left", image_url: "/assets/walls/wood/top_left.png",
+        tileType: "wall", variant: WallTilingVariant.TOP_LEFT, connectivityMask: 0
+    },
+    {
+        id: "wall_top_right", name: "Wall Top Right", image_url: "/assets/walls/wood/top_right.png",
+        tileType: "wall", variant: WallTilingVariant.TOP_RIGHT, connectivityMask: 0
+    },
+    {
+        id: "wall_top_vertical_edge", name: "Wall Top Vertical Edge", image_url: "/assets/walls/wood/top_vertical_edge.png",
+        tileType: "wall", variant: WallTilingVariant.TOP_VERTICAL_EDGE, connectivityMask: 0
+    },
+    {
+        id: "wall_vertical", name: "Wall Vertical", image_url: "/assets/walls/wood/vertical.png",
+        tileType: "wall", variant: WallTilingVariant.VERTICAL, connectivityMask: 0
+    },
+    {
+        id: "wall_full_cross_top_left", name: "Wall Full Cross Top Left", image_url: "/assets/walls/wood/full_cross_top_left.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_CROSS_TOP_LEFT, connectivityMask: 0
+    },
+    {
+        id: "wall_full_cross_top_right", name: "Wall Full Cross Top Right", image_url: "/assets/walls/wood/full_cross_top_right.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_CROSS_TOP_RIGHT, connectivityMask: 0
+    },
+    {
+        id: "wall_full_cross_bottom_left", name: "Wall Full Cross Bottom Left", image_url: "/assets/walls/wood/full_cross_bottom_left.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_CROSS_BOTTOM_LEFT, connectivityMask: 0
+    },
+    {
+        id: "wall_full_cross_bottom_right", name: "Wall Full Cross Bottom Right", image_url: "/assets/walls/wood/full_cross_bottom_right.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_CROSS_BOTTOM_RIGHT, connectivityMask: 0
+    },
+    {
+        id: "wall_full_cross_top_left_bottom_right", name: "Wall Full Cross Top Left Bottom Right", image_url: "/assets/walls/wood/full_cross_top_left_bottom_right.png", 
+        tileType: "wall", variant: WallTilingVariant.FULL_CROSS_TOP_LEFT_BOTTOM_RIGHT, connectivityMask: 0
+    },
+    {
+        id: "wall_full_cross_top_right_bottom_left", name: "Wall Full Cross Top Right Bottom Left", image_url: "/assets/walls/wood/full_cross_top_right_bottom_left.png",
+        tileType: "wall", variant: WallTilingVariant.FULL_CROSS_TOP_RIGHT_BOTTOM_LEFT, connectivityMask: 0
+    }   
+];
+
 // Tile types for autotiling system
-export type TileType = "grass" | "water" | "stone" | "empty";
+export type TileType = "grass" | "water" | "stone" | "wall" | "empty";
 
 // Helper function to get all textures for a specific tile type
 export const getTexturesForType = (tileType: TileType): AutotilingTexture[] => {
@@ -184,6 +434,8 @@ export const getTexturesForType = (tileType: TileType): AutotilingTexture[] => {
             return GRASS_AUTOTILING_TEXTURES;
         case "water":
             return WATER_AUTOTILING_TEXTURES;
+        case "wall":
+            return WALL_AUTOTILING_TEXTURES;
         default:
             return [];
     }

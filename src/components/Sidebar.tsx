@@ -145,6 +145,7 @@ export const Sidebar: React.FC = () => {
             preview: "/assets/grass_center.png",
           },
           { id: "water", name: "Water Tiles", preview: "/assets/water.png" },
+          { id: "wall", name: "Wall Tiles", preview: "/assets/walls/wood/full_center.png" },
         ];
         const showPaintingModes = currentTool === "draw" && setPaintingMode;
         return (

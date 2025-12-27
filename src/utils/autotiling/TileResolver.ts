@@ -4,15 +4,19 @@ import {
   AutotilingVariant, 
   GRASS_AUTOTILING_TEXTURES,
   WATER_AUTOTILING_TEXTURES,
+  WALL_AUTOTILING_TEXTURES,
   TileType
 } from '../../types/textures';
 import { NeighborContext } from './NeighborAnalyzer';
+import { WallTileResolver } from './WallTileResolver';
 
 export class TileResolver {
   private textureCache: Map<TileType, AutotilingTexture[]>;
+  private wallResolver: WallTileResolver;
 
   constructor() {
     this.textureCache = new Map();
+    this.wallResolver = new WallTileResolver();
     this.buildTextureCache();
   }
 
@@ -20,6 +24,11 @@ export class TileResolver {
    * Resolves the appropriate texture based on neighbor connectivity
    */
   resolveTileTexture(context: NeighborContext, tileType: TileType): AutotilingTexture | null {
+    // Handle wall tiles with specialized resolver
+    if (tileType === "wall") {
+      return this.wallResolver.resolveWallTile(context);
+    }
+
     const textures = this.textureCache.get(tileType);
     if (!textures) return null;
 
@@ -122,7 +131,8 @@ export class TileResolver {
     // Group all texture types
     const allTextures = [
       ...GRASS_AUTOTILING_TEXTURES,
-      ...WATER_AUTOTILING_TEXTURES
+      ...WATER_AUTOTILING_TEXTURES,
+      ...WALL_AUTOTILING_TEXTURES
     ];
     
     allTextures.forEach(texture => {
