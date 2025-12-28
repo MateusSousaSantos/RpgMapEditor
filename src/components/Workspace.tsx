@@ -4,6 +4,7 @@ import { Stage, Layer } from "react-konva";
 import Konva from "konva";
 import { useTool } from "../contexts/ToolContext";
 import { useLayer } from "../contexts/LayerContext";
+import { useProps } from "../contexts/PropContext";
 import { usePixelArtRendering } from "../hooks/usePixelArtRendering";
 import { useViewport } from "../hooks/useViewport";
 import { usePaintingTool } from "../hooks/usePaintingTool";
@@ -31,10 +32,10 @@ export const Workspace = React.memo(() => {
     updateProp,
     deletePropFromLayer
   } = useLayer();
+  const { selectedPropId, setSelectedPropId } = useProps();
   
   const stageRef = useRef<Konva.Stage | null>(null);
   const layerRef = useRef<Konva.Layer | null>(null);
-  const [selectedPropId, setSelectedPropId] = React.useState<string | null>(null);
 
   // Viewport management
   const { stageScale, stagePos, handleWheel } = useViewport(5);

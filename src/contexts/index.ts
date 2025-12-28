@@ -15,3 +15,4 @@ export { useModal, ModalProvider } from './ModalContext';
 export { useTool, ToolProvider } from './ToolContext';
 export { useUndoRedo, UndoRedoProvider } from './UndoRedoContext';
 export { useMapStorage, MapStorageProvider } from './MapStorageContext';
+export { useSidebar, SidebarProvider } from './SidebarContext';

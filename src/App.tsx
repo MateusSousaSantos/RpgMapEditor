@@ -9,6 +9,7 @@ import { LayerOperationsProvider } from "./contexts/LayerOperationsContext";
 import { AutotilingProvider } from "./contexts/AutotilingContext";
 import { PropProvider } from "./contexts/PropContext";
 import { UndoRedoProvider } from "./contexts/UndoRedoContext";
+import { SidebarProvider } from "./contexts/SidebarContext";
 import { MapStorageIntegration } from "./components/MapStorageIntegration";
 import { Sidebar } from "./components/Sidebar";
 import { Workspace } from "./components/Workspace";
@@ -16,6 +17,7 @@ import { CreateMapDialog, MapConfig } from "./components/CreateMapDialog";
 import { useMapStorage } from "./contexts/MapStorageContext";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import PropSidebar from "./components/PropSidebar";
 
 // Component that has access to all contexts
 const AppContent: React.FC = () => {
@@ -52,10 +54,10 @@ const AppContent: React.FC = () => {
               RPG Map Editor - {mapConfig.name}
             </h1>
             <div className="flex items-center gap-2 text-xs text-slate-400">
-              <span>{mapConfig.cols}×{mapConfig.rows} • Zoom: (use mouse wheel)</span>
+              <span>{mapConfig.cols}X{mapConfig.rows} • Zoom: (use mouse wheel)</span>
             </div>
           </header>
-
+          <PropSidebar />
           <ErrorBoundary name="Sidebar">
             <Sidebar />
           </ErrorBoundary>
@@ -99,7 +101,9 @@ const App: React.FC = () => {
                 <LayerProvider>
                   <MapStorageIntegration>
                     <ModalProvider>
-                      <AppContent />
+                      <SidebarProvider>
+                        <AppContent />
+                      </SidebarProvider>
                     </ModalProvider>
                   </MapStorageIntegration>
                 </LayerProvider>

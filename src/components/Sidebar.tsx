@@ -16,6 +16,7 @@ import {
 } from "react-icons/fa";
 import { useTool } from "../contexts/ToolContext";
 import { useLayer } from "../contexts/LayerContext";
+import { useSidebar } from "../contexts/SidebarContext";
 import { TileType } from "../types/textures";
 import { getCategoriesWithProps, getPropsByCategory } from "../types/props";
 import { PiSelection } from "react-icons/pi";
@@ -35,7 +36,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 export const Sidebar: React.FC = () => {
-  const [open, setOpen] = useState(true);
+  const { isOpen, toggleSidebar } = useSidebar();
   
   // Get categories that have props
   const propCategories = getCategoriesWithProps();
@@ -605,28 +606,28 @@ export const Sidebar: React.FC = () => {
   return (
     <div
       className={`fixed top-12 right-0 bottom-0 z-50 bg-slate-900/80 shadow-xl transition-all duration-300 ease-in-out ${
-        open ? "w-96" : "w-16"
+        isOpen ? "w-96" : "w-16"
       } flex flex-col`}
     >
       {/* Header */}
       <div
         className={`flex items-center justify-${
-          open ? "between" : "center"
+          isOpen ? "between" : "center"
         } p-4 border-b border-slate-800 `}
       >
-        {open && <h2 className="text-xl font-bold text-slate-400">Tools</h2>}
+        {isOpen && <h2 className="text-xl font-bold text-slate-400">Tools</h2>}
         <button
-          onClick={() => setOpen(!open)}
+          onClick={toggleSidebar}
           className="p-2 text-gray-600 hover:text-gray-200 hover:bg-slate-800 rounded transition-colors"
-          aria-label={open ? "Close sidebar" : "Open sidebar"}
+          aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
         >
-          {open ? <FaChevronRight /> : <FaChevronLeft />}
+          {isOpen ? <FaChevronRight /> : <FaChevronLeft />}
         </button>
       </div>
 
       {/* Tool Selection */}
       {/* Tool Content */}
-      {open && (
+      {isOpen && (
         <div className="flex-1 overflow-y-auto">
           <div className="p-4 gap-y-2 flex flex-col">
             {renderToolContent()}

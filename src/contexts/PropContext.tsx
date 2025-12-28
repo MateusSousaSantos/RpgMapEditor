@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, ReactNode, useCallback, useState } from 'react';
 import { Prop } from '../types/props';
 import { useLayerState } from './LayerStateContext';
 import { useUndoRedo } from './UndoRedoContext';
@@ -13,6 +13,13 @@ interface PropContextType {
   addProp: (layerIndex: number, prop: Prop) => void;
   updateProp: (layerIndex: number, propId: string, updates: Partial<Prop>) => void;
   deleteProp: (layerIndex: number, propId: string) => void;
+  
+  // Prop ordering
+  moveProp: (layerIndex: number, fromIndex: number, toIndex: number) => void;
+  
+  // Prop selection
+  selectedPropId: string | null;
+  setSelectedPropId: (propId: string | null) => void;
   
   // Batch operations
   updateLayerProps: (layerIndex: number, updater: (props: Prop[]) => Prop[]) => void;
@@ -40,6 +47,7 @@ interface PropProviderProps {
 export const PropProvider: React.FC<PropProviderProps> = ({ children }) => {
   const layerState = useLayerState();
   const { executeCommand, isExecuting } = useUndoRedo();
+  const [selectedPropId, setSelectedPropId] = useState<string | null>(null);
 
   // Update layer props directly (used by commands and internal operations)
   const updateLayerProps = useCallback((layerIndex: number, updater: (props: Prop[]) => Prop[]) => {
@@ -117,12 +125,25 @@ export const PropProvider: React.FC<PropProviderProps> = ({ children }) => {
     executeCommand(command);
   }, [layerState.layers, isExecuting, executeCommand, updateLayerProps]);
 
+  // Reorder props within a layer
+  const moveProp = useCallback((layerIndex: number, fromIndex: number, toIndex: number) => {
+    updateLayerProps(layerIndex, (props) => {
+      const newProps = [...props];
+      const [movedProp] = newProps.splice(fromIndex, 1);
+      newProps.splice(toIndex, 0, movedProp);
+      return newProps;
+    });
+  }, [updateLayerProps]);
+
   const value: PropContextType = {
     getLayerProps,
     getPropById,
     addProp,
     updateProp,
     deleteProp,
+    moveProp,
+    selectedPropId,
+    setSelectedPropId,
     updateLayerProps,
   };
 

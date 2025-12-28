@@ -1,6 +1,7 @@
 // src/components/WorkspaceUI/ToolIndicator.tsx
 import React from 'react';
 import { ToolType, PaintingMode, getPaintingModeDisplayName } from '../../contexts/ToolContext';
+import { useSidebar } from '../../contexts/SidebarContext';
 
 interface ToolIndicatorProps {
   currentTool: ToolType;
@@ -15,12 +16,17 @@ export const ToolIndicator: React.FC<ToolIndicatorProps> = ({
   paintingMode,
   setPaintingMode
 }) => {
+  const { isOpen } = useSidebar();
+  
   if (!currentTool) return null;
 
   const showPaintingModes = currentTool === 'draw' && setPaintingMode;
+  
+  // Adjust position based on sidebar state
+  const rightPosition = isOpen ? 'right-[25rem]' : 'right-20';
 
   return (
-    <div className="absolute top-4 left-4 z-10 bg-black/70 text-white px-4 py-2 rounded-lg backdrop-blur-sm">
+    <div className={`absolute top-4 ${rightPosition} z-10 bg-black/70 text-white px-4 py-2 rounded-lg backdrop-blur-sm transition-all duration-300 ease-in-out`}>
       <div className="text-sm font-medium">
         Current Tool: {getToolDisplayName(currentTool)}
       </div>
