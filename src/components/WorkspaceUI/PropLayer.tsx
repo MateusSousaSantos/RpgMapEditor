@@ -1,7 +1,7 @@
 // src/components/WorkspaceUI/PropLayer.tsx
 
 import React, { useRef, useEffect } from "react";
-import { Image, Transformer, Group, Circle, Text } from "react-konva";
+import { Image, Transformer } from "react-konva";
 import { Prop } from "../../types/props";
 import useImage from "use-image";
 import Konva from "konva";
@@ -109,41 +109,6 @@ const PropImage: React.FC<PropImageProps> = ({
               return newBox;
             }}
           />
-          {/* Delete button */}
-          <Group x={prop.x + prop.width + 5} y={prop.y - 5}>
-            <Circle
-              radius={5}
-              stroke="#fff"
-              strokeWidth={1}
-              onClick={(e) => {
-                e.cancelBubble = true;
-                onDelete();
-              }}
-              onTap={(e) => {
-                e.cancelBubble = true;
-                onDelete();
-              }}
-              onMouseEnter={(e) => {
-                const container = e.target.getStage()?.container();
-                if (container) container.style.cursor = "pointer";
-              }}
-              onMouseLeave={(e) => {
-                const container = e.target.getStage()?.container();
-                if (container) container.style.cursor = "default";
-              }}
-            />
-            <Text
-              text="×"
-              fontSize={8}
-              fontStyle="bold"
-              fill="#fff"
-              align="center"
-              verticalAlign="middle"
-              offsetX={2.25}
-              offsetY={3.5}
-              listening={false}
-            />
-          </Group>
         </>
       )}
     </>

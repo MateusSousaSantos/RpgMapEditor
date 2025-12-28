@@ -19,17 +19,29 @@ canvas {
   image-rendering: pixelated !important;
   image-rendering: crisp-edges !important;
   image-rendering: -webkit-optimize-contrast !important;
+  /* Prevent subpixel rendering */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-font-smoothing: none;
 }
 
 /* Konva specific overrides */
 .konvajs-content {
   image-rendering: pixelated !important;
   image-rendering: crisp-edges !important;
+  /* Ensure pixel-perfect positioning */
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .konvajs-content canvas {
   image-rendering: pixelated !important;
   image-rendering: crisp-edges !important;
+  /* Prevent gaps between tiles */
+  outline: none;
+  border: none;
+  margin: 0;
+  padding: 0;
 }
 
 /* Custom class for pixel art canvas */

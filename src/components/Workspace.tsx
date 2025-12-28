@@ -192,10 +192,11 @@ export const Workspace = React.memo(() => {
         draggable={stageDraggable}
         scaleX={stageScale}
         scaleY={stageScale}
-        x={stagePos.x}
-        y={stagePos.y}
+        x={Math.round(stagePos.x)}
+        y={Math.round(stagePos.y)}
         className="bg-slate-950 pixel-art-canvas"
         pixelRatio={1}
+        imageSmoothingEnabled={false}
         listening={true}
         onWheel={(e) => handleWheel(e, stageRef)}
         onDragMove={handleStageDragMove}

@@ -31,6 +31,13 @@ export const usePixelArtRendering = (
               console.log('Image smoothing disabled for pixel art');
             }
           }
+          
+          // Ensure canvas uses device pixel ratio of 1 for crisp pixels
+          const dpr = window.devicePixelRatio || 1;
+          if (dpr !== 1) {
+            canvas.style.width = canvas.width + 'px';
+            canvas.style.height = canvas.height + 'px';
+          }
         }
 
         // Force layer to redraw with new settings

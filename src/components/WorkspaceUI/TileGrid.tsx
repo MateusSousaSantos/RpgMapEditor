@@ -105,14 +105,16 @@ export const TileGrid = React.memo<TileGridProps>(({
           <KonvaImage
             key={`${row}-${col}`}
             image={texture}
-            x={col * TILE_SIZE}
-            y={row * TILE_SIZE}
+            x={Math.floor(col * TILE_SIZE)}
+            y={Math.floor(row * TILE_SIZE)}
             width={TILE_SIZE}
             height={TILE_SIZE}
             perfectDrawEnabled={false}
             shadowForStrokeEnabled={false}
             transformsEnabled="position"
             listening={false}
+            imageSmoothingEnabled={false}
+            pixelRatio={1}
           />
         );
       }
