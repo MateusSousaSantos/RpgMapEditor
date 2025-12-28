@@ -9,6 +9,7 @@ export interface Prop {
     height: number;
     rotation?: number;
     src: string;
+    color?: string; // Hex color for tinting black and white textures
 }
 
 export interface PropDefinition {
@@ -18,6 +19,7 @@ export interface PropDefinition {
     defaultWidth: number;
     defaultHeight: number;
     category: PropCategory;
+    colorable?: boolean; // Whether this prop supports color tinting
 }
 
 export type PropCategory = 'nature' | 'furniture' | 'decoration' | 'structure';
@@ -41,6 +43,7 @@ export const PROP_CATEGORIES: PropCategoryConfig[] = [
 // 1. Add the prop image to public/assets/props/
 // 2. Add a new PropDefinition to this array with the correct category
 // 3. The prop will automatically appear in the sidebar under its category
+// 4. Set colorable: true for black/white props that support recoloring
 export const PROP_REGISTRY: PropDefinition[] = [
     {
         id: 'rock',
@@ -49,6 +52,7 @@ export const PROP_REGISTRY: PropDefinition[] = [
         defaultWidth: 16,
         defaultHeight: 16,
         category: 'nature',
+        colorable: true, // Rock can be recolored
     },
     {
         id: 'cerca',
@@ -57,6 +61,7 @@ export const PROP_REGISTRY: PropDefinition[] = [
         defaultWidth: 16,
         defaultHeight: 16,
         category: 'structure',
+        colorable: true, // Fence can be recolored
     },
 
     {
@@ -66,6 +71,7 @@ export const PROP_REGISTRY: PropDefinition[] = [
         defaultWidth: 16,
         defaultHeight: 16,
         category: 'structure',
+        colorable: true, // Fence can be recolored
     },
     {
         id: 'cerca2',
@@ -74,6 +80,7 @@ export const PROP_REGISTRY: PropDefinition[] = [
         defaultWidth: 16,
         defaultHeight: 16,
         category: 'structure',
+        colorable: true, // Fence can be recolored
     },
 
 ];
@@ -88,4 +95,15 @@ export const getCategoriesWithProps = (): PropCategoryConfig[] => {
     return PROP_CATEGORIES.filter(category =>
         PROP_REGISTRY.some(prop => prop.category === category.id)
     );
+};
+
+// Helper function to check if a prop type supports coloring
+export const isPropColorable = (propType: string): boolean => {
+    const propDef = PROP_REGISTRY.find(prop => prop.id === propType);
+    return propDef?.colorable === true;
+};
+
+// Helper function to get prop definition by type
+export const getPropDefinition = (propType: string): PropDefinition | undefined => {
+    return PROP_REGISTRY.find(prop => prop.id === propType);
 };

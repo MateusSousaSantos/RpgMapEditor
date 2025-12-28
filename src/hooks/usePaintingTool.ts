@@ -20,6 +20,10 @@ interface UsePaintingToolProps {
   tileSize: number;
   autotilingEngine: AutotilingEngine | null;
   stageRef: React.RefObject<Konva.Stage | null>;
+  // Color support
+  selectedTileColor?: string;
+  updateTileColor?: (layerIndex: number, row: number, col: number, color: string) => void;
+  initializeColorMatrix?: (layerIndex: number) => void;
 }
 
 export type { PaintingMode };
@@ -35,7 +39,10 @@ export const usePaintingTool = ({
   cols,
   tileSize,
   autotilingEngine,
-  stageRef
+  stageRef,
+  selectedTileColor,
+  updateTileColor,
+  initializeColorMatrix
 }: UsePaintingToolProps) => {
   // Use extracted hooks for specific concerns
   const { getTilePosition, getMousePosition, calculateDistance } = useTileSelection({
@@ -130,6 +137,20 @@ export const usePaintingTool = ({
 
         stableUpdateLayerTextureMatrix(currentLayerIndex, textureMatrix);
       }
+
+      // Apply colors if color support is enabled and a non-white color is selected
+      if (updateTileColor && initializeColorMatrix && selectedTileColor && selectedTileColor !== '#ffffff') {
+        // Initialize color matrix if needed
+        const currentLayerAfterUpdate = stableGetCurrentLayer();
+        if (currentLayerAfterUpdate && !('colorMatrix' in currentLayerAfterUpdate)) {
+          initializeColorMatrix(currentLayerIndex);
+        }
+        
+        // Apply color to all original tile positions (not autotiling updates)
+        tilesToUpdate.forEach(({ row, col }) => {
+          updateTileColor(currentLayerIndex, row, col, selectedTileColor);
+        });
+      }
     } else if (setLayers) {
       // Legacy behavior using setLayers
       setLayers(prevLayers => {
@@ -189,8 +210,19 @@ export const usePaintingTool = ({
 
         return newLayers;
       });
+      
+      // Apply colors if color support is enabled and a non-white color is selected
+      if (updateTileColor && initializeColorMatrix && selectedTileColor && selectedTileColor !== '#ffffff') {
+        // Initialize color matrix if needed
+        initializeColorMatrix(currentLayerIndex);
+        
+        // Apply color to all original tile positions (not autotiling updates)
+        tilesToUpdate.forEach(({ row, col }) => {
+          updateTileColor(currentLayerIndex, row, col, selectedTileColor);
+        });
+      }
     }
-  }, [autotilingEngine, currentLayerIndex, selectedTileType, rows, cols, setLayers, stableUpdateLayerMatrix, stableUpdateLayerTextureMatrix, stableGetCurrentLayer]);
+  }, [autotilingEngine, currentLayerIndex, selectedTileType, rows, cols, setLayers, stableUpdateLayerMatrix, stableUpdateLayerTextureMatrix, stableGetCurrentLayer, selectedTileColor, updateTileColor, initializeColorMatrix]);
 
   // Handle single tile painting
   const paintSingleTile = useCallback((row: number, col: number) => {

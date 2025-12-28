@@ -166,6 +166,7 @@ export const Workspace = React.memo(() => {
       width: propWidth,
       height: propHeight,
       src: propSrc,
+      color: '#ffffff', // Default color for all props (white = no tinting)
     };
     
     addPropToLayer(currentLayerIndex, newProp);

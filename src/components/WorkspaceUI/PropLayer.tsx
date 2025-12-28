@@ -6,6 +6,16 @@ import { Prop } from "../../types/props";
 import useImage from "use-image";
 import Konva from "konva";
 
+// Convert hex color to RGB values
+const hexToRgb = (hex: string) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16) / 255,
+    g: parseInt(result[2], 16) / 255,
+    b: parseInt(result[3], 16) / 255
+  } : { r: 1, g: 1, b: 1 };
+};
+
 interface PropImageProps {
   prop: Prop;
   isSelected: boolean;
@@ -24,6 +34,37 @@ const PropImage: React.FC<PropImageProps> = ({
   const [image] = useImage(prop.src);
   const imageRef = useRef<Konva.Image>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
+
+  // Apply color tinting filter when color changes
+  useEffect(() => {
+    const node = imageRef.current;
+    if (!node || !prop.color || prop.color === '#ffffff') {
+      // Remove filter if no color or white color
+      node?.filters([]);
+      node?.cache();
+      return;
+    }
+
+    const { r, g, b } = hexToRgb(prop.color);
+    
+    // Custom color tinting filter
+    const colorTintFilter = function(imageData: ImageData) {
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        // Get the luminance (brightness) of the pixel
+        const luminance = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) / 255;
+        
+        // Apply the color tint based on luminance
+        data[i] = Math.round(luminance * r * 255);     // Red
+        data[i + 1] = Math.round(luminance * g * 255); // Green
+        data[i + 2] = Math.round(luminance * b * 255); // Blue
+        // Alpha channel (data[i + 3]) remains unchanged
+      }
+    };
+
+    node?.filters([colorTintFilter]);
+    node?.cache();
+  }, [prop.color, image]);
 
   useEffect(() => {
     if (isSelected && transformerRef.current && imageRef.current) {

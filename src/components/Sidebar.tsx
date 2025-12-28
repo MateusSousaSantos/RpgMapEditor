@@ -19,6 +19,7 @@ import { useLayer } from "../contexts/LayerContext";
 import { useSidebar } from "../contexts/SidebarContext";
 import { TileType } from "../types/textures";
 import { getCategoriesWithProps, getPropsByCategory } from "../types/props";
+import { ColorPicker } from "./ColorWheel";
 import { PiSelection } from "react-icons/pi";
 import { HiCursorClick } from "react-icons/hi";
 import {
@@ -63,6 +64,8 @@ export const Sidebar: React.FC = () => {
     setSelectedTileType,
     paintingMode,
     setPaintingMode,
+    selectedTileColor,
+    setSelectedTileColor,
   } = useTool();
 
   const toggleSection = (section: keyof typeof sectionsOpen) => {
@@ -149,6 +152,7 @@ export const Sidebar: React.FC = () => {
           { id: "wall", name: "Wall Tiles", preview: "/assets/walls/wood/full_center.png" },
         ];
         const showPaintingModes = currentTool === "draw" && setPaintingMode;
+        
         return (
           <div className="space-y-2">
             <h3 className="text-lg font-semibold text-slate-200">Paint Tool</h3>
@@ -226,6 +230,30 @@ export const Sidebar: React.FC = () => {
                     Autotiling will automatically select appropriate textures
                     based on tile placement.
                   </p>
+                </div>
+              </CollapsibleContent>
+            </div>
+
+            <div className="border-b border-slate-700 pb-3">
+              <SectionHeader
+                title="Tile Color"
+                isOpen={sectionsOpen.tileColor || true}
+                onToggle={() => toggleSection("tileColor")}
+              />
+              <CollapsibleContent isOpen={sectionsOpen.tileColor || true}>
+                <div className="mt-2 pl-5">
+                  <div className="space-y-3">
+                    <ColorPicker
+                      color={selectedTileColor}
+                      onChange={setSelectedTileColor}
+                    />
+                    
+                    <div className="text-xs text-slate-500 space-y-1">
+                      <p><strong>Tile Coloring:</strong> New tiles will be placed with the selected color.</p>
+                      <p><strong>Note:</strong> Only colorable textures (like grass) will show the tinting effect.</p>
+                      <p><strong>White:</strong> Places tiles without any color tinting.</p>
+                    </div>
+                  </div>
                 </div>
               </CollapsibleContent>
             </div>

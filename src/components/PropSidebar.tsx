@@ -1,6 +1,9 @@
 import { useLayer } from "../contexts/LayerContext";
 import { useProps } from "../contexts/PropContext";
-import { FaGripVertical, FaTrash } from "react-icons/fa";
+import { FaGripVertical, FaTrash, FaPalette } from "react-icons/fa";
+import { ColorPicker } from "./ColorWheel";
+import { isPropColorable } from "../types/props";
+import { useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -22,6 +25,7 @@ interface SortablePropItemProps {
   isSelected: boolean;
   onDelete: (propId: string) => void;
   onSelect: (propId: string) => void;
+  onUpdate: (propId: string, updates: Partial<Prop>) => void;
 }
 
 const SortablePropItem: React.FC<SortablePropItemProps> = ({
@@ -29,6 +33,7 @@ const SortablePropItem: React.FC<SortablePropItemProps> = ({
   isSelected,
   onDelete,
   onSelect,
+  onUpdate,
 }) => {
   const {
     attributes,
@@ -38,6 +43,9 @@ const SortablePropItem: React.FC<SortablePropItemProps> = ({
     transition,
     isDragging,
   } = useSortable({ id: prop.id });
+
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const isColorable = isPropColorable(prop.type);
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -76,22 +84,41 @@ const SortablePropItem: React.FC<SortablePropItemProps> = ({
                   src={prop.src}
                   alt={prop.type}
                   className="w-full h-full object-contain"
+                  style={
+                    prop.color && prop.color !== '#ffffff'
+                      ? { filter: `hue-rotate(0deg) saturate(0%) brightness(50%)`, backgroundColor: prop.color, mixBlendMode: 'multiply' }
+                      : undefined
+                  }
                 />
               </span>
               <span className="text-sm text-slate-200 truncate">
                 {prop.type}
               </span>
             </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(prop.id);
-              }}
-              className="text-slate-400 hover:text-red-400 p-1 shrink-0 transition-colors"
-              title="Delete prop"
-            >
-              <FaTrash size={12} />
-            </button>
+            <div className="flex items-center gap-1 shrink-0">
+              {isColorable && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowColorPicker(!showColorPicker);
+                  }}
+                  className="text-slate-400 hover:text-blue-400 p-1 transition-colors"
+                  title="Change color"
+                >
+                  <FaPalette size={12} />
+                </button>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(prop.id);
+                }}
+                className="text-slate-400 hover:text-red-400 p-1 transition-colors"
+                title="Delete prop"
+              >
+                <FaTrash size={12} />
+              </button>
+            </div>
           </div>
           <div className="text-xs text-slate-400 space-y-0.5">
             <div>
@@ -103,16 +130,49 @@ const SortablePropItem: React.FC<SortablePropItemProps> = ({
             {prop.rotation !== undefined && prop.rotation !== 0 && (
               <div>Rotation: {Math.round(prop.rotation)}°</div>
             )}
+            {isColorable && prop.color && (
+              <div className="flex items-center gap-2">
+                <span>Color:</span>
+                <div
+                  className="w-3 h-3 rounded border border-slate-600"
+                  style={{ backgroundColor: prop.color }}
+                />
+                <span className="font-mono text-xs">{prop.color}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
+      
+      {/* Color Picker */}
+      {showColorPicker && isColorable && (
+        <div className="px-3 pb-3">
+          <div className="border-t border-slate-700 pt-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-slate-300">Color Tinting</span>
+              <button
+                onClick={() => onUpdate(prop.id, { color: '#ffffff' })}
+                className="text-xs text-slate-400 hover:text-slate-200 px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 transition-colors"
+                title="Reset to white (no tinting)"
+              >
+                Reset
+              </button>
+            </div>
+            <ColorPicker
+              color={prop.color || '#ffffff'}
+              onChange={(color) => onUpdate(prop.id, { color })}
+              className="w-full"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default function PropSidebar() {
   const { layers, currentLayerIndex } = useLayer();
-  const { moveProp, deleteProp, selectedPropId, setSelectedPropId } =
+  const { moveProp, deleteProp, updateProp, selectedPropId, setSelectedPropId } =
     useProps();
 
   const sensors = useSensors(
@@ -128,6 +188,10 @@ export default function PropSidebar() {
 
   const handleDelete = (propId: string) => {
     deleteProp(currentLayerIndex, propId);
+  };
+
+  const handleUpdate = (propId: string, updates: Partial<Prop>) => {
+    updateProp(currentLayerIndex, propId, updates);
   };
 
   return (
@@ -188,6 +252,7 @@ export default function PropSidebar() {
                         isSelected={selectedPropId === prop.id}
                         onDelete={handleDelete}
                         onSelect={setSelectedPropId}
+                        onUpdate={handleUpdate}
                       />
                     );
                   })}

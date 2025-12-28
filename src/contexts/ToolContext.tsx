@@ -38,6 +38,9 @@ interface ToolContextType {
   paintingMode: PaintingMode;
   setPaintingMode: (mode: PaintingMode) => void;
   getPaintingModeDisplayName: (mode: PaintingMode) => string;
+  // Tile color selection
+  selectedTileColor: string;
+  setSelectedTileColor: (color: string) => void;
 }
 
 const ToolContext = createContext<ToolContextType | undefined>(undefined);
@@ -59,6 +62,7 @@ export const ToolProvider: React.FC<ToolProviderProps> = ({ children }) => {
   const [selectedTileType, setSelectedTileType] = useState<TileType>('grass');
   const [selectedTexture, setSelectedTexture] = useState<string>('grass1'); // Legacy support
   const [paintingMode, setPaintingMode] = useState<PaintingMode>('single');
+  const [selectedTileColor, setSelectedTileColor] = useState<string>('#ff0000'); // Default to red
 
   const isToolActive = (tool: ToolType) => {
     return currentTool === tool;
@@ -76,7 +80,9 @@ export const ToolProvider: React.FC<ToolProviderProps> = ({ children }) => {
       setSelectedTexture,
       paintingMode,
       setPaintingMode,
-      getPaintingModeDisplayName
+      getPaintingModeDisplayName,
+      selectedTileColor,
+      setSelectedTileColor
     }}>
       {children}
     </ToolContext.Provider>
