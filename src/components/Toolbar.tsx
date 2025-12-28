@@ -3,7 +3,7 @@ import {
   FaPaintBrush,
   FaUndo,
   FaRedo,
-
+  FaEraser,
   FaCircle,
   FaPlus,
   FaArchive,
@@ -221,6 +221,23 @@ export const Toolbar: React.FC = () => {
     );
   };
 
+  const Erase = () => {
+    const isActive = isToolActive("erase");
+    return (
+      <button
+        onClick={() => setCurrentTool(isActive ? null : "erase")}
+        className={`p-2 rounded transition-colors ${
+          isActive ? "bg-white text-black" : "hover:bg-white group"
+        }`}
+      >
+        <FaEraser
+          size={20}
+          className={isActive ? "text-black" : "text-white group-hover:text-black"}
+        />
+      </button>
+    );
+  };
+
   // const Select = () => {
   //   const isActive = isToolActive('select');
   //   return (
@@ -264,7 +281,7 @@ export const Toolbar: React.FC = () => {
       {/* Tools */}
       {/* <Select /> */}
       <Draw />
-      {/* <Erase /> */}
+      <Erase />
       <Props />
 
       {/* Auto-save Indicator */}

@@ -295,7 +295,56 @@ export const Sidebar: React.FC = () => {
         );
 
       case "erase":
-        return <div className="space-y-4"></div>;
+        const showEraserModes = currentTool === "erase" && setPaintingMode;
+        return (
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-slate-200">Eraser Tool</h3>
+            <p className="text-sm text-slate-400">
+              Remove tiles from the current layer.
+            </p>
+            {showEraserModes && paintingMode && (
+              <div className="border-b border-slate-700 pb-3">
+                <SectionHeader
+                  title="Eraser Modes"
+                  isOpen={sectionsOpen.paintingModes}
+                  onToggle={() => toggleSection("paintingModes")}
+                />
+                <CollapsibleContent isOpen={sectionsOpen.paintingModes}>
+                  <div className="mt-2 space-y-2 pl-5">
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setPaintingMode("single")}
+                        className={`w-10 h-10 flex items-center justify-center rounded text-slate-200 transition-all duration-200 ${
+                          paintingMode === "single"
+                            ? "bg-slate-400 "
+                            : "bg-slate-700 hover:bg-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        <HiCursorClick size={20} />
+                      </button>
+                      <button
+                        onClick={() => setPaintingMode("box")}
+                        className={`w-10 h-10 flex items-center justify-center rounded text-slate-200 transition-all duration-200 ${
+                          paintingMode === "box"
+                            ? "bg-slate-400 "
+                            : "bg-slate-700 hover:bg-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        <PiSelection size={20} />
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2">
+                      <strong>Click/Drag:</strong> Click to erase single tiles or drag to erase multiple tiles.
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      <strong>Box:</strong> Click and drag to select an area to erase all tiles within.
+                    </p>
+                  </div>
+                </CollapsibleContent>
+              </div>
+            )}
+          </div>
+        );
 
       case "addMap":
         return <div className="space-y-4"></div>;

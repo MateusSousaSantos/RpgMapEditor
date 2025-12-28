@@ -8,6 +8,7 @@ import { useProps } from "../contexts/PropContext";
 import { usePixelArtRendering } from "../hooks/usePixelArtRendering";
 import { useViewport } from "../hooks/useViewport";
 import { usePaintingTool } from "../hooks/usePaintingTool";
+import { useEraserTool } from "../hooks/useEraserTool";
 import { ToolIndicator } from "./WorkspaceUI/ToolIndicator";
 import { TileGrid } from "./WorkspaceUI/TileGrid";
 import { LayerLines } from "./WorkspaceUI/LayerLines";
@@ -62,15 +63,31 @@ export const Workspace = React.memo(() => {
     stageRef
   });
 
+  // Eraser tool integration
+  const eraserTool = useEraserTool({
+    updateLayerMatrix,
+    updateLayerTextureMatrix,
+    getCurrentLayer,
+    currentLayerIndex,
+    rows: mapConfig.rows,
+    cols: mapConfig.cols,
+    tileSize: TILE_SIZE,
+    autotilingEngine,
+    stageRef
+  });
+
   // Update painting mode when it changes in context
   React.useEffect(() => {
     paintingTool.setPaintingMode(paintingMode);
-  }, [paintingMode, paintingTool.setPaintingMode]);
+    eraserTool.setEraserMode(paintingMode);
+  }, [paintingMode, paintingTool.setPaintingMode, eraserTool.setEraserMode]);
 
-  // Handle stage events for painting
+  // Handle stage events for painting and erasing
   const handleStageMouseDown = (e: any) => {
     if (currentTool === 'draw') {
       paintingTool.handleMouseDown();
+    } else if (currentTool === 'erase') {
+      eraserTool.handleMouseDown();
     }
     // Deselect prop when clicking on empty space
     const clickedOnEmpty = e.target === e.target.getStage();
@@ -82,12 +99,16 @@ export const Workspace = React.memo(() => {
   const handleStageMouseMove = () => {
     if (currentTool === 'draw') {
       paintingTool.handleMouseMove();
+    } else if (currentTool === 'erase') {
+      eraserTool.handleMouseMove();
     }
   };
 
   const handleStageMouseUp = () => {
     if (currentTool === 'draw') {
       paintingTool.handleMouseUp();
+    } else if (currentTool === 'erase') {
+      eraserTool.handleMouseUp();
     }
   };
 
@@ -95,11 +116,13 @@ export const Workspace = React.memo(() => {
   const handleTileClick = (row: number, col: number) => {
     if (currentTool === 'draw') {
       paintingTool.handleTileClick(row, col);
+    } else if (currentTool === 'erase') {
+      eraserTool.handleTileClick(row, col);
     }
   };
 
   // Determine if stage should be draggable
-  const stageDraggable = !paintingTool.paintingState.isActive;
+  const stageDraggable = !paintingTool.paintingState.isActive && !eraserTool.paintingState.isActive;
 
   // Stage drag handlers to fix ReactKonva warning
   const handleStageDragMove = React.useCallback(() => {
@@ -239,6 +262,15 @@ export const Workspace = React.memo(() => {
               startCol={paintingTool.previewBoxSelection.startCol}
               endRow={paintingTool.previewBoxSelection.endRow}
               endCol={paintingTool.previewBoxSelection.endCol}
+              tileSize={TILE_SIZE}
+            />
+          )}
+          {eraserTool.previewBoxSelection && (
+            <BoxSelectionPreview
+              startRow={eraserTool.previewBoxSelection.startRow}
+              startCol={eraserTool.previewBoxSelection.startCol}
+              endRow={eraserTool.previewBoxSelection.endRow}
+              endCol={eraserTool.previewBoxSelection.endCol}
               tileSize={TILE_SIZE}
             />
           )}
