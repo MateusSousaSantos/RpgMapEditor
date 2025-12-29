@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   FaChevronLeft,
   FaChevronRight,
@@ -17,7 +17,7 @@ import {
 import { useTool } from "../contexts/ToolContext";
 import { useLayer } from "../contexts/LayerContext";
 import { useSidebar } from "../contexts/SidebarContext";
-import { TileType } from "../types/textures";
+import { TileType, TilesetRegistry } from "../types/textures";
 import { getCategoriesWithProps, getPropsByCategory } from "../types/props";
 import { ColorPicker } from "./ColorWheel";
 import { PiSelection } from "react-icons/pi";
@@ -47,6 +47,7 @@ export const Sidebar: React.FC = () => {
     const initial: Record<string, boolean> = {
       paintingModes: true,
       tileSelection: true,
+      tileColor: true,
       propSelection: true,
       layers: true,
       gridLayer: true,
@@ -138,19 +139,35 @@ export const Sidebar: React.FC = () => {
   const renderToolContent = () => {
     switch (currentTool) {
       case "draw":
+        // Get available tile types dynamically from TilesetRegistry
         const availableTileTypes: {
           id: TileType;
           name: string;
           preview: string;
-        }[] = [
-          {
-            id: "grass",
-            name: "Grass Tiles",
-            preview: "/assets/grass_center.png",
-          },
-          { id: "water", name: "Water Tiles", preview: "/assets/water.png" },
-          { id: "wall", name: "Wall Tiles", preview: "/assets/walls/wood/full_center.png" },
-        ];
+        }[] = useMemo(() => {
+          const allTilesets = TilesetRegistry.getAllTilesets();
+          const tileTypeMap = new Map<TileType, { name: string; preview: string }>();
+          
+          allTilesets.forEach(tileset => {
+            if (!tileTypeMap.has(tileset.tileType)) {
+              // Get a preview texture (try center, then single, then fallback)
+              const previewTexture = TilesetRegistry.getTexture(tileset.id, 'center' as any) ||
+                                   TilesetRegistry.getTexture(tileset.id, 'single' as any) ||
+                                   TilesetRegistry.getTexture(tileset.id, tileset.fallbackVariant as any);
+              
+              tileTypeMap.set(tileset.tileType, {
+                name: `${tileset.tileType.charAt(0).toUpperCase() + tileset.tileType.slice(1)} Tiles`,
+                preview: previewTexture?.image_url || ''
+              });
+            }
+          });
+          
+          return Array.from(tileTypeMap.entries()).map(([id, data]) => ({
+            id,
+            name: data.name,
+            preview: data.preview
+          }));
+        }, []);
         const showPaintingModes = currentTool === "draw" && setPaintingMode;
         
         return (
@@ -237,16 +254,19 @@ export const Sidebar: React.FC = () => {
             <div className="border-b border-slate-700 pb-3">
               <SectionHeader
                 title="Tile Color"
-                isOpen={sectionsOpen.tileColor || true}
+                isOpen={sectionsOpen.tileColor}
                 onToggle={() => toggleSection("tileColor")}
               />
-              <CollapsibleContent isOpen={sectionsOpen.tileColor || true}>
+              <CollapsibleContent isOpen={sectionsOpen.tileColor}>
                 <div className="mt-2 pl-5">
                   <div className="space-y-3">
-                    <ColorPicker
-                      color={selectedTileColor}
-                      onChange={setSelectedTileColor}
-                    />
+                    {/* Memoized ColorPicker to prevent re-rendering on tile placement */}
+                    {React.useMemo(() => (
+                      <ColorPicker
+                        color={selectedTileColor}
+                        onChange={setSelectedTileColor}
+                      />
+                    ), [selectedTileColor, setSelectedTileColor])}
                     
                     <div className="text-xs text-slate-500 space-y-1">
                       <p><strong>Tile Coloring:</strong> New tiles will be placed with the selected color.</p>

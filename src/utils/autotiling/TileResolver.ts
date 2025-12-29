@@ -2,22 +2,18 @@
 import { 
   AutotilingTexture, 
   AutotilingVariant, 
-  GRASS_AUTOTILING_TEXTURES,
-  WATER_AUTOTILING_TEXTURES,
-  WALL_AUTOTILING_TEXTURES,
-  TileType
+  TileType,
+  TilesetRegistry,
+  RuntimeTexture
 } from '../../types/textures';
 import { NeighborContext } from './NeighborAnalyzer';
 import { WallTileResolver } from './WallTileResolver';
 
 export class TileResolver {
-  private textureCache: Map<TileType, AutotilingTexture[]>;
   private wallResolver: WallTileResolver;
 
   constructor() {
-    this.textureCache = new Map();
     this.wallResolver = new WallTileResolver();
-    this.buildTextureCache();
   }
 
   /**
@@ -29,17 +25,21 @@ export class TileResolver {
       return this.wallResolver.resolveWallTile(context);
     }
 
-    const textures = this.textureCache.get(tileType);
-    if (!textures) return null;
+    // Get the primary tileset for this tile type
+    const tilesetId = this.getPrimaryTilesetId(tileType);
+    if (!tilesetId) {
+      console.warn(`No tileset available for tile type: ${tileType}`);
+      return null;
+    }
 
     // Find the best matching texture based on connectivity pattern
-    return this.findBestMatch(context, textures);
+    return this.findBestMatch(context, tilesetId, tileType);
   }
 
   /**
    * Finds the best matching texture for the given connectivity context
    */
-  private findBestMatch(context: NeighborContext, textures: AutotilingTexture[]): AutotilingTexture {
+  private findBestMatch(context: NeighborContext, tilesetId: string, tileType: TileType): AutotilingTexture {
     const { cardinalConnections, diagonalConnections } = context;
     
     // Count cardinal connections
@@ -48,17 +48,50 @@ export class TileResolver {
     // Determine the appropriate variant based on connection pattern
     const variant = this.determineVariant(cardinalConnections, diagonalConnections, cardinalCount);
     
-    // Find texture with matching variant
-    let matchingTexture = textures.find(texture => texture.variant === variant);
+    // Get texture from tileset registry with automatic fallback
+    let matchingTexture = TilesetRegistry.getTexture(tilesetId, variant);
     
-    // Fallback to center if no exact match found
+    // If not found, try common fallbacks
     if (!matchingTexture) {
-      matchingTexture = textures.find(texture => texture.variant === AutotilingVariant.CENTER)
-        || textures.find(texture => texture.variant === AutotilingVariant.SINGLE)
-        || textures[0];
+      const fallbacks = [AutotilingVariant.CENTER, AutotilingVariant.SINGLE];
+      for (const fallback of fallbacks) {
+        matchingTexture = TilesetRegistry.getTexture(tilesetId, fallback);
+        if (matchingTexture) break;
+      }
     }
     
-    return matchingTexture!;
+    // If still not found, use the tileset's default fallback
+    if (!matchingTexture) {
+      const tileset = TilesetRegistry.getTileset(tilesetId);
+      if (tileset) {
+        matchingTexture = TilesetRegistry.getTexture(tilesetId, tileset.fallbackVariant as any);
+      }
+    }
+    
+    return matchingTexture || this.createEmptyTexture(tileType);
+  }
+
+  /**
+   * Creates a basic empty texture as final fallback
+   */
+  private createEmptyTexture(tileType: TileType): RuntimeTexture {
+    return {
+      id: `fallback_${tileType}`,
+      name: `Fallback ${tileType}`,
+      image_url: '',
+      tileType: tileType,
+      variant: AutotilingVariant.SINGLE,
+      connectivityMask: 0,
+      loaded: false
+    };
+  }
+
+  /**
+   * Gets the primary tileset ID for a tile type
+   */
+  private getPrimaryTilesetId(tileType: TileType): string | null {
+    const tilesets = TilesetRegistry.getTilesetsForType(tileType);
+    return tilesets.length > 0 ? tilesets[0].id : null;
   }
 
   /**
@@ -125,39 +158,45 @@ export class TileResolver {
   }
 
   /**
-   * Builds the texture cache organized by tile type
-   */
-  private buildTextureCache(): void {
-    // Group all texture types
-    const allTextures = [
-      ...GRASS_AUTOTILING_TEXTURES,
-      ...WATER_AUTOTILING_TEXTURES,
-      ...WALL_AUTOTILING_TEXTURES
-    ];
-    
-    allTextures.forEach(texture => {
-      if (!this.textureCache.has(texture.tileType as TileType)) {
-        this.textureCache.set(texture.tileType as TileType, []);
-      }
-      this.textureCache.get(texture.tileType as TileType)!.push(texture);
-    });
-  }
-
-  /**
-   * Gets all available textures for a tile type
+   * Gets all available textures for a tile type (backwards compatibility)
    */
   getTexturesForType(tileType: TileType): AutotilingTexture[] {
-    return this.textureCache.get(tileType) || [];
+    const tilesets = TilesetRegistry.getTilesetsForType(tileType);
+    const textures: AutotilingTexture[] = [];
+    
+    for (const tileset of tilesets) {
+      const tilesetTextures = TilesetRegistry.getAllTexturesForTileset(tileset.id);
+      textures.push(...tilesetTextures);
+    }
+    
+    return textures;
   }
 
   /**
-   * Gets texture by ID
+   * Gets texture by ID (backwards compatibility)
    */
   getTextureById(textureId: string): AutotilingTexture | undefined {
-    for (const textures of this.textureCache.values()) {
-      const texture = textures.find(t => t.id === textureId);
-      if (texture) return texture;
+    // Try to parse tileset and variant from ID
+    const parts = textureId.split('_');
+    if (parts.length >= 2) {
+      const tilesetId = parts[0];
+      const variant = parts.slice(1).join('_');
+      
+      // Try to get from registry
+      const texture = TilesetRegistry.getTexture(tilesetId, variant as any);
+      if (texture) {
+        return texture;
+      }
     }
+
+    // Fallback: search through all tilesets
+    const allTilesets = TilesetRegistry.getAllTilesets();
+    for (const tileset of allTilesets) {
+      const textures = TilesetRegistry.getAllTexturesForTileset(tileset.id);
+      const found = textures.find(t => t.id === textureId);
+      if (found) return found;
+    }
+    
     return undefined;
   }
 }

@@ -1,40 +1,55 @@
 // src/utils/autotiling/WallTileResolver.ts
 import {
     AutotilingTexture,
-    WALL_AUTOTILING_TEXTURES,
-    WallTilingVariant
+    WallTilingVariant,
+    TilesetRegistry
 } from '../../types/textures';
 import { NeighborContext } from './NeighborAnalyzer';
 
 /**
  * WallTileResolver handles autotiling logic for wall tiles.
  * Walls blend with adjacent walls based on orthogonal connectivity (N, S, E, W).
- * The 24 wall variants represent different positional configurations.
+ * The 24+ wall variants represent different positional configurations.
  *
  * Variant Mapping Logic:
- * - No connections (0): Isolated wall - uses full position variants
- * - 1 connection: Edge wall - uses full with direction
- * - 2 connections (opposite): Straight lines - uses center_horizontal/center_vertical
+ * - No connections (0): Isolated wall - uses single variant
+ * - 1 connection: Edge wall - uses direction-specific variants
+ * - 2 connections (opposite): Straight lines - uses horizontal/vertical variants
  * - 2 connections (adjacent): Corner positions - uses corner variants
  * - 3 connections: T-junctions - uses t_* variants
  * - 4 connections: Cross - uses cross or full variants
  */
 export class WallTileResolver {
-    private textures: AutotilingTexture[] = [];
-
-    constructor() {
-        this.textures = WALL_AUTOTILING_TEXTURES;
+    private getWallTilesetId(): string | null {
+        const wallTilesets = TilesetRegistry.getTilesetsForType("wall");
+        return wallTilesets.length > 0 ? wallTilesets[0].id : null;
     }
 
     /**
      * Resolves the appropriate wall tile texture based on neighbor connectivity
      */
     resolveWallTile(context: NeighborContext): AutotilingTexture | null {
-        const variant = this.determineWallVariant(context);
-        const texture = this.findTextureByVariant(variant);
-        if (!texture) {
-            console.error(`[Wall] No texture found for any variant at (${context.center.row}, ${context.center.col})`);
+        const tilesetId = this.getWallTilesetId();
+        if (!tilesetId) {
+            console.warn('No wall tileset available');
+            return null;
         }
+
+        const variant = this.determineWallVariant(context);
+        let texture = TilesetRegistry.getTexture(tilesetId, variant);
+        
+        // If variant not found, try fallback
+        if (!texture) {
+            const tileset = TilesetRegistry.getTileset(tilesetId);
+            if (tileset) {
+                texture = TilesetRegistry.getTexture(tilesetId, tileset.fallbackVariant as any);
+            }
+        }
+        
+        if (!texture) {
+            console.warn(`No texture found for wall variant ${variant} at (${context.center.row}, ${context.center.col})`);
+        }
+        
         return texture;
     }
 
@@ -262,33 +277,5 @@ export class WallTileResolver {
 
         // Default fallback for any unexpected case
         return WallTilingVariant.SINGLE;
-    }
-
-    /**
-     * Finds a texture matching the specified variant with fallback logic
-     */
-    private findTextureByVariant(variant: WallTilingVariant): AutotilingTexture | null {
-        // First, try exact match
-        let texture = this.textures.find(t => t.variant === variant);
-
-        if (texture) {
-            return texture;
-        }
-
-        // Fallback 1: Return SINGLE variant
-        console.warn(`[Wall] Texture not found for variant: ${variant}, falling back to SINGLE`);
-        texture = this.textures.find(t => t.variant === WallTilingVariant.SINGLE);
-        if (texture) return texture;
-
-        // Fallback 2: Return first available texture
-        console.warn(`[Wall] SINGLE variant not found, returning first available texture`);
-        return this.textures.length > 0 ? this.textures[0] : null;
-    }
-
-    /**
-     * Gets all wall textures
-     */
-    getWallTextures(): AutotilingTexture[] {
-        return this.textures;
     }
 }
