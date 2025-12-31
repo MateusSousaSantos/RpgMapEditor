@@ -24,3 +24,4 @@ export * from './LayerOperationCommand';
 export * from './GridConfigCommand';
 export * from './PropCommand';
 export * from './BatchCommand';
+export * from './OverlayCommand';

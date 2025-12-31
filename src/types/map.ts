@@ -30,5 +30,6 @@ export interface EnhancedLayer {
   opacity: number; // 0-1 range
   matrix: import('../types/textures').TileType[][];
   textureMatrix?: string[][]; // Resolved texture IDs from autotiling
+  overlayMatrix?: string[][][]; // Array of overlay texture IDs per tile position [row][col][overlayIndex]
   props: Prop[];
 }

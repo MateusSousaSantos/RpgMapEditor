@@ -1,8 +1,7 @@
 // src/contexts/MapStorageContext.tsx
 
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-import { EnhancedLayer } from '../types/map';
-
+import { EnhancedLayer } from '../types/map';import { initializeOverlayMatrix } from '../utils/overlayUtils';
 // Storage configuration
 const STORAGE_CONFIG = {
   MAX_MAPS: 10,
@@ -255,7 +254,12 @@ export const MapStorageProvider: React.FC<MapStorageProviderProps> = ({
       // Load layers and grid, ensure props are initialized for backward compatibility
       const loadedLayers = mapDocument.layers.map(layer => ({
         ...layer,
-        props: layer.props || []
+        props: layer.props || [],
+        // Initialize overlay matrix if it doesn't exist (backward compatibility)
+        overlayMatrix: layer.overlayMatrix || initializeOverlayMatrix(
+          mapDocument.dimensions.rows,
+          mapDocument.dimensions.cols
+        )
       }));
       setLayers(loadedLayers);
       if (setGridLayer) {
@@ -362,7 +366,12 @@ export const MapStorageProvider: React.FC<MapStorageProviderProps> = ({
       // Ensure props are initialized for backward compatibility
       const loadedLayers = autoSaveData.mapData.layers.map(layer => ({
         ...layer,
-        props: layer.props || []
+        props: layer.props || [],
+        // Initialize overlay matrix if it doesn't exist (backward compatibility)
+        overlayMatrix: layer.overlayMatrix || initializeOverlayMatrix(
+          autoSaveData.mapData.dimensions.rows,
+          autoSaveData.mapData.dimensions.cols
+        )
       }));
       setLayers(loadedLayers);
       if (setGridLayer) {

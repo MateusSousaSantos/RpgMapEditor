@@ -61,6 +61,7 @@ interface LayerContextType {
   updateLayerTile: (layerIndex: number, row: number, col: number, tileType: TileType) => void;
   updateLayerMatrix: (layerIndex: number, matrix: TileType[][]) => void;
   updateLayerTextureMatrix: (layerIndex: number, textureMatrix: string[][]) => void;
+  updateLayerOverlayMatrix: (layerIndex: number, overlayMatrix: string[][][]) => void;
   
   // Prop management
   addPropToLayer: (layerIndex: number, prop: Prop) => void;
@@ -142,6 +143,7 @@ export const LayerProvider: React.FC<LayerProviderProps> = ({ children }) => {
     updateLayerTile: layerOps.updateLayerTile,
     updateLayerMatrix: layerOps.updateLayerMatrix,
     updateLayerTextureMatrix: layerOps.updateLayerTextureMatrix,
+    updateLayerOverlayMatrix: layerOps.updateLayerOverlayMatrix,
     addPropToLayer: layerOps.addPropToLayer,
     updateLayerProps: layerOps.updateLayerProps,
     updateProp: layerOps.updateProp,

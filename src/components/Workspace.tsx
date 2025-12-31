@@ -26,6 +26,7 @@ export const Workspace = React.memo(() => {
     getAutotilingEngine,
     updateLayerMatrix,
     updateLayerTextureMatrix,
+    updateLayerOverlayMatrix,
     getVisibleLayers,
     gridLayer,
     mapConfig,
@@ -53,6 +54,7 @@ export const Workspace = React.memo(() => {
   const paintingTool = usePaintingTool({
     updateLayerMatrix,
     updateLayerTextureMatrix,
+    updateLayerOverlayMatrix,
     getCurrentLayer,
     currentLayerIndex,
     selectedTileType,
@@ -67,6 +69,7 @@ export const Workspace = React.memo(() => {
   const eraserTool = useEraserTool({
     updateLayerMatrix,
     updateLayerTextureMatrix,
+    updateLayerOverlayMatrix,
     getCurrentLayer,
     currentLayerIndex,
     rows: mapConfig.rows,
