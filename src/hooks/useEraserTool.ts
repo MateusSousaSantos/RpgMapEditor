@@ -6,13 +6,11 @@ import { AutotilingEngine, BatchUpdateResult } from '../utils/autotiling/Autotil
 import { useTileSelection } from './useTileSelection';
 import { usePaintingMode, type PaintingMode } from './usePaintingMode';
 import { usePaintingState } from './usePaintingState';
-import { clearOverlaysAtPosition } from '../utils/overlayUtils';
 
 interface UseEraserToolProps {
   updateLayerMatrix?: (layerIndex: number, matrix: TileType[][]) => void;
   updateLayerTextureMatrix?: (layerIndex: number, textureMatrix: string[][]) => void;
-  updateLayerOverlayMatrix?: (layerIndex: number, overlayMatrix: string[][][]) => void;
-  getCurrentLayer?: () => { matrix: TileType[][]; textureMatrix?: string[][]; overlayMatrix?: string[][][] } | undefined;
+  getCurrentLayer?: () => { matrix: TileType[][]; textureMatrix?: string[][] } | undefined;
   currentLayerIndex: number;
   rows: number;
   cols: number;
@@ -26,7 +24,6 @@ export type { PaintingMode };
 export const useEraserTool = ({
   updateLayerMatrix,
   updateLayerTextureMatrix,
-  updateLayerOverlayMatrix,
   getCurrentLayer,
   currentLayerIndex,
   rows,
@@ -56,27 +53,15 @@ export const useEraserTool = ({
 
   const stableUpdateLayerMatrix = useMemo(() => updateLayerMatrix, [updateLayerMatrix]);
   const stableUpdateLayerTextureMatrix = useMemo(() => updateLayerTextureMatrix, [updateLayerTextureMatrix]);
-  const stableUpdateLayerOverlayMatrix = useMemo(() => updateLayerOverlayMatrix, [updateLayerOverlayMatrix]);
   const stableGetCurrentLayer = useMemo(() => getCurrentLayer, [getCurrentLayer]);
 
-  // Apply tile erasure (set tiles to null) and clear overlays
+  // Apply tile erasure (set tiles to null)
   const applyTileErasure = useCallback((tilesToErase: { row: number; col: number }[]) => {
     if (!autotilingEngine || tilesToErase.length === 0) return;
 
     if (stableUpdateLayerMatrix && stableGetCurrentLayer) {
       const currentLayer = stableGetCurrentLayer();
       if (!currentLayer) return;
-
-      // Clear overlays first
-      if (stableUpdateLayerOverlayMatrix && currentLayer.overlayMatrix) {
-        let overlayMatrix = currentLayer.overlayMatrix.map(row => row.map(cell => [...cell]));
-        
-        tilesToErase.forEach(({ row, col }) => {
-          overlayMatrix = clearOverlaysAtPosition(overlayMatrix, row, col);
-        });
-
-        stableUpdateLayerOverlayMatrix(currentLayerIndex, overlayMatrix);
-      }
 
       const newMatrix = currentLayer.matrix.map(r => [...r]);
       
@@ -146,7 +131,7 @@ export const useEraserTool = ({
         stableUpdateLayerTextureMatrix(currentLayerIndex, newTextureMatrix);
       }
     }
-  }, [autotilingEngine, stableUpdateLayerMatrix, stableUpdateLayerTextureMatrix, stableUpdateLayerOverlayMatrix, stableGetCurrentLayer, currentLayerIndex, rows, cols]);
+  }, [autotilingEngine, stableUpdateLayerMatrix, stableUpdateLayerTextureMatrix, stableGetCurrentLayer, currentLayerIndex, rows, cols]);
 
   // Handle mouse down event
   const handleMouseDown = useCallback(() => {

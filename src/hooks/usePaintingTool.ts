@@ -7,14 +7,12 @@ import { Layer } from '../components/WorkspaceUI/TileGrid';
 import { useTileSelection } from './useTileSelection';
 import { usePaintingMode, type PaintingMode } from './usePaintingMode';
 import { usePaintingState } from './usePaintingState';
-import { applyOverlayTiles, initializeOverlayMatrix } from '../utils/overlayUtils';
 
 interface UsePaintingToolProps {
   setLayers?: React.Dispatch<React.SetStateAction<Layer[]>>; // Legacy support
   updateLayerMatrix?: (layerIndex: number, matrix: TileType[][]) => void; // LayerContext support
   updateLayerTextureMatrix?: (layerIndex: number, textureMatrix: string[][]) => void; // LayerContext support
-  updateLayerOverlayMatrix?: (layerIndex: number, overlayMatrix: string[][][]) => void; // Overlay support
-  getCurrentLayer?: () => { matrix: TileType[][]; textureMatrix?: string[][]; overlayMatrix?: string[][][] } | undefined; // LayerContext support
+  getCurrentLayer?: () => { matrix: TileType[][]; textureMatrix?: string[][] } | undefined; // LayerContext support
   currentLayerIndex: number;
   selectedTileType: TileType;
   rows: number;
@@ -34,7 +32,6 @@ export const usePaintingTool = ({
   setLayers,
   updateLayerMatrix,
   updateLayerTextureMatrix,
-  updateLayerOverlayMatrix,
   getCurrentLayer,
   currentLayerIndex,
   selectedTileType,
@@ -72,53 +69,12 @@ export const usePaintingTool = ({
   // Stable references to prevent callback recreation
   const stableUpdateLayerMatrix = useMemo(() => updateLayerMatrix, [updateLayerMatrix]);
   const stableUpdateLayerTextureMatrix = useMemo(() => updateLayerTextureMatrix, [updateLayerTextureMatrix]);
-  const stableUpdateLayerOverlayMatrix = useMemo(() => updateLayerOverlayMatrix, [updateLayerOverlayMatrix]);
   const stableGetCurrentLayer = useMemo(() => getCurrentLayer, [getCurrentLayer]);
 
   // Memoize applyTileUpdates to prevent recreating on every render
   // Only recreates when autotilingEngine, selectedTileType, or layer update functions change
   const applyTileUpdates = useCallback((tilesToUpdate: { row: number; col: number }[]) => {
-    // Handle overlay tiles separately
-    if (selectedTileType === 'overlay') {
-      if (stableUpdateLayerOverlayMatrix && stableGetCurrentLayer) {
-        const currentLayer = stableGetCurrentLayer();
-        if (!currentLayer) return;
-
-        // Initialize overlay matrix if it doesn't exist
-        let overlayMatrix = currentLayer.overlayMatrix || initializeOverlayMatrix(rows, cols);
-        
-        // Apply overlay tiles for each position
-        tilesToUpdate.forEach(({ row, col }) => {
-          overlayMatrix = applyOverlayTiles(overlayMatrix, row, col, rows, cols);
-        });
-
-        stableUpdateLayerOverlayMatrix(currentLayerIndex, overlayMatrix);
-      }
-      return;
-    }
-
-    // Regular tile painting logic (non-overlay)
     if (!autotilingEngine || tilesToUpdate.length === 0) return;
-
-    // Clear overlays when painting regular tiles over positions with overlays
-    if (stableUpdateLayerOverlayMatrix && stableGetCurrentLayer) {
-      const currentLayer = stableGetCurrentLayer();
-      if (currentLayer && currentLayer.overlayMatrix) {
-        let overlayMatrix = currentLayer.overlayMatrix.map(row => row.map(cell => [...cell]));
-        let hasOverlaysToRemove = false;
-
-        tilesToUpdate.forEach(({ row, col }) => {
-          if (overlayMatrix[row] && overlayMatrix[row][col] && overlayMatrix[row][col].length > 0) {
-            overlayMatrix[row][col] = [];
-            hasOverlaysToRemove = true;
-          }
-        });
-
-        if (hasOverlaysToRemove) {
-          stableUpdateLayerOverlayMatrix(currentLayerIndex, overlayMatrix);
-        }
-      }
-    }
 
     // Use LayerContext methods if available, otherwise fall back to setLayers
     if (stableUpdateLayerMatrix && stableGetCurrentLayer) {
@@ -266,7 +222,7 @@ export const usePaintingTool = ({
         });
       }
     }
-  }, [autotilingEngine, currentLayerIndex, selectedTileType, rows, cols, setLayers, stableUpdateLayerMatrix, stableUpdateLayerTextureMatrix, stableUpdateLayerOverlayMatrix, stableGetCurrentLayer, selectedTileColor, updateTileColor, initializeColorMatrix]);
+  }, [autotilingEngine, currentLayerIndex, selectedTileType, rows, cols, setLayers, stableUpdateLayerMatrix, stableUpdateLayerTextureMatrix, stableGetCurrentLayer, selectedTileColor, updateTileColor, initializeColorMatrix]);
 
   // Handle single tile painting
   const paintSingleTile = useCallback((row: number, col: number) => {

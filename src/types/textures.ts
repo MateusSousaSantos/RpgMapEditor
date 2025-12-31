@@ -13,7 +13,7 @@ export interface AutotilingTexture {
     name: string;
     image_url: string;
     tileType: string;
-    variant: AutotilingVariant | WallTilingVariant | OverlayTilingVariant;
+    variant: AutotilingVariant | WallTilingVariant;
     connectivityMask: number; // Bitmask representing required connections
 }
 
@@ -30,7 +30,7 @@ export interface TilesetDefinition {
 
 // Component definition for each tileset variant
 export interface TilesetComponent {
-    variant: AutotilingVariant | WallTilingVariant | OverlayTilingVariant;
+    variant: AutotilingVariant | WallTilingVariant;
     filename: string;
     required: boolean;
     connectivityMask: number;
@@ -138,22 +138,6 @@ export const WallTilingVariant = {
 } as const;
 
 export type WallTilingVariant = typeof WallTilingVariant[keyof typeof WallTilingVariant];
-
-// Overlay tiling variants (9-tile system with center + 8 directional overlays)
-// These tiles overlay on top of existing tiles without replacing them
-export const OverlayTilingVariant = {
-    CENTER: "center",           // Center tile (always placed)
-    NORTH: "north",             // Top overlay
-    NORTHEAST: "northeast",     // Top-right overlay
-    EAST: "east",               // Right overlay
-    SOUTHEAST: "southeast",     // Bottom-right overlay
-    SOUTH: "south",             // Bottom overlay
-    SOUTHWEST: "southwest",     // Bottom-left overlay
-    WEST: "west",               // Left overlay
-    NORTHWEST: "northwest"      // Top-left overlay
-} as const;
-
-export type OverlayTilingVariant = typeof OverlayTilingVariant[keyof typeof OverlayTilingVariant];
 
 // Direction bitmask constants for 8-neighbor analysis
 export const DIRECTION_MASKS = {
@@ -279,25 +263,6 @@ export const SIMPLE_COMPONENTS: TilesetComponent[] = [
     { variant: AutotilingVariant.SINGLE, filename: "single.png", required: true, connectivityMask: 0 }
 ];
 
-// Overlay components for 9-tile overlay system
-// These tiles overlay on adjacent tiles without replacing them
-export const OVERLAY_COMPONENTS: TilesetComponent[] = [
-    // Center tile (always required)
-    { variant: OverlayTilingVariant.CENTER, filename: "center.png", required: true, connectivityMask: 0 },
-    
-    // Cardinal direction overlays (required)
-    { variant: OverlayTilingVariant.NORTH, filename: "north.png", required: true, connectivityMask: 0 },
-    { variant: OverlayTilingVariant.EAST, filename: "east.png", required: true, connectivityMask: 0 },
-    { variant: OverlayTilingVariant.SOUTH, filename: "south.png", required: true, connectivityMask: 0 },
-    { variant: OverlayTilingVariant.WEST, filename: "west.png", required: true, connectivityMask: 0 },
-    
-    // Diagonal overlays (required)
-    { variant: OverlayTilingVariant.NORTHEAST, filename: "northeast.png", required: true, connectivityMask: 0 },
-    { variant: OverlayTilingVariant.SOUTHEAST, filename: "southeast.png", required: true, connectivityMask: 0 },
-    { variant: OverlayTilingVariant.SOUTHWEST, filename: "southwest.png", required: true, connectivityMask: 0 },
-    { variant: OverlayTilingVariant.NORTHWEST, filename: "northwest.png", required: true, connectivityMask: 0 }
-];
-
 // Default tileset definitions
 export const DEFAULT_TILESETS: TilesetDefinition[] = [
     {
@@ -326,20 +291,11 @@ export const DEFAULT_TILESETS: TilesetDefinition[] = [
         baseDir: "/assets/walls/wood",
         fallbackVariant: WallTilingVariant.SINGLE,
         components: WALL_COMPONENTS
-    },
-    {
-        id: "default_overlay",
-        name: "Default Overlay",
-        theme: "default",
-        tileType: "overlay",
-        baseDir: "/assets/tilesets/default/overlay",
-        fallbackVariant: OverlayTilingVariant.CENTER,
-        components: OVERLAY_COMPONENTS
     }
 ];
 
 // Tile types for autotiling system  
-export type TileType = "grass" | "water" | "stone" | "wall" | "overlay" | "empty";
+export type TileType = "grass" | "water" | "stone" | "wall" | "empty";
 
 // Tileset registry for runtime management
 export class TilesetRegistry {
@@ -367,7 +323,7 @@ export class TilesetRegistry {
     }
 
     // Generate runtime texture for a tileset variant
-    static getTexture(tilesetId: string, variant: AutotilingVariant | WallTilingVariant | OverlayTilingVariant): RuntimeTexture | null {
+    static getTexture(tilesetId: string, variant: AutotilingVariant | WallTilingVariant): RuntimeTexture | null {
         const cacheKey = `${tilesetId}_${variant}`;
         const cached = this.textureCache.get(cacheKey);
         
@@ -404,7 +360,7 @@ export class TilesetRegistry {
     }
 
     // Get fallback texture when variant is missing
-    private static getFallbackTexture(tilesetId: string, fallbackVariant: AutotilingVariant | WallTilingVariant | OverlayTilingVariant): RuntimeTexture | null {
+    private static getFallbackTexture(tilesetId: string, fallbackVariant: AutotilingVariant | WallTilingVariant): RuntimeTexture | null {
         const cacheKey = `${tilesetId}_${fallbackVariant}`;
         const cached = this.textureCache.get(cacheKey);
         

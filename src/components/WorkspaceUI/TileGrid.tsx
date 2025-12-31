@@ -14,7 +14,6 @@ export interface Layer {
   name: string;
   matrix: TileType[][];
   textureMatrix?: string[][]; // Resolved texture IDs from autotiling
-  overlayMatrix?: string[][][]; // Array of overlay texture IDs per tile position
 }
 
 interface TileGridProps {
@@ -102,7 +101,6 @@ export const TileGrid = React.memo<TileGridProps>(({
           continue;
         }
         
-        // Render base tile
         tiles.push(
           <KonvaImage
             key={`${row}-${col}`}
@@ -119,39 +117,11 @@ export const TileGrid = React.memo<TileGridProps>(({
             pixelRatio={1}
           />
         );
-        
-        // Render overlay tiles if they exist for this position
-        const overlays = layer.overlayMatrix?.[row]?.[col];
-        if (overlays && overlays.length > 0) {
-          overlays.forEach((overlayTextureId, index) => {
-            if (!overlayTextureId) return;
-            
-            const overlayTexture = getTexture(overlayTextureId);
-            if (!overlayTexture) return;
-            
-            tiles.push(
-              <KonvaImage
-                key={`${row}-${col}-overlay-${index}`}
-                image={overlayTexture}
-                x={Math.floor(col * TILE_SIZE)}
-                y={Math.floor(row * TILE_SIZE)}
-                width={TILE_SIZE}
-                height={TILE_SIZE}
-                perfectDrawEnabled={false}
-                shadowForStrokeEnabled={false}
-                transformsEnabled="position"
-                listening={false}
-                imageSmoothingEnabled={false}
-                pixelRatio={1}
-              />
-            );
-          });
-        }
       }
     }
     
     return tiles;
-  }, [resolvedTextures, getTexture, rows, cols, layer.overlayMatrix]);
+  }, [resolvedTextures, getTexture, rows, cols]);
 
   // Memoize chunk rendering to prevent recalculating on every state change
   const renderChunkedTiles = useMemo(() => {

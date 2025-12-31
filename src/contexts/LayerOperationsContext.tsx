@@ -8,7 +8,6 @@ import { useAutotiling } from './AutotilingContext';
 import { useProps } from './PropContext';
 import { MapConfig } from '../components/CreateMapDialog';
 import { EnhancedLayer } from '../types/map';
-import { initializeOverlayMatrix } from '../utils/overlayUtils';
 
 interface LayerOperationsContextType {
   // Map initialization
@@ -30,7 +29,6 @@ interface LayerOperationsContextType {
   updateLayerTile: (layerIndex: number, row: number, col: number, tileType: TileType) => void;
   updateLayerMatrix: (layerIndex: number, matrix: TileType[][]) => void;
   updateLayerTextureMatrix: (layerIndex: number, textureMatrix: string[][]) => void;
-  updateLayerOverlayMatrix: (layerIndex: number, overlayMatrix: string[][][]) => void;
 
   // Prop management
   addPropToLayer: (layerIndex: number, prop: Prop) => void;
@@ -117,7 +115,6 @@ export const LayerOperationsProvider: React.FC<LayerOperationsProviderProps> = (
         visible: true,
         opacity: 1.0,
         matrix: baseMatrix,
-        overlayMatrix: initializeOverlayMatrix(config.rows, config.cols),
         props: [],
       };
 
@@ -143,7 +140,6 @@ export const LayerOperationsProvider: React.FC<LayerOperationsProviderProps> = (
       visible: true,
       opacity: 1.0,
       matrix: createEmptyMatrix(),
-      overlayMatrix: initializeOverlayMatrix(layerState.mapConfig.rows, layerState.mapConfig.cols),
       props: [],
     };
 
@@ -180,7 +176,6 @@ export const LayerOperationsProvider: React.FC<LayerOperationsProviderProps> = (
       opacity: layerToDuplicate.opacity,
       matrix: layerToDuplicate.matrix.map(row => [...row]),
       textureMatrix: layerToDuplicate.textureMatrix?.map(row => [...row]),
-      overlayMatrix: layerToDuplicate.overlayMatrix?.map(row => row.map(cell => [...cell])),
       props: layerToDuplicate.props.map(p => ({...p})),
     };
 
@@ -391,23 +386,6 @@ export const LayerOperationsProvider: React.FC<LayerOperationsProviderProps> = (
     directUpdateLayerTextureMatrix(layerIndex, textureMatrix);
   }, [isExecuting, directUpdateLayerTextureMatrix]);
 
-  const directUpdateLayerOverlayMatrix = useCallback((layerIndex: number, overlayMatrix: string[][][]) => {
-    layerState.setLayers(prevLayers =>
-      prevLayers.map((layer, i) =>
-        i === layerIndex ? { ...layer, overlayMatrix: overlayMatrix.map(row => row.map(cell => [...cell])) } : layer
-      )
-    );
-  }, [layerState]);
-
-  const updateLayerOverlayMatrix = useCallback((layerIndex: number, overlayMatrix: string[][][]) => {
-    if (isExecuting) {
-      directUpdateLayerOverlayMatrix(layerIndex, overlayMatrix);
-      return;
-    }
-
-    directUpdateLayerOverlayMatrix(layerIndex, overlayMatrix);
-  }, [isExecuting, directUpdateLayerOverlayMatrix]);
-
   // Prop management - delegated to PropContext
   const addPropToLayer = useCallback((layerIndex: number, prop: Prop) => {
     propContext.addProp(layerIndex, prop);
@@ -474,7 +452,6 @@ export const LayerOperationsProvider: React.FC<LayerOperationsProviderProps> = (
     updateLayerTile,
     updateLayerMatrix,
     updateLayerTextureMatrix,
-    updateLayerOverlayMatrix,
     addPropToLayer,
     updateLayerProps,
     updateProp,
